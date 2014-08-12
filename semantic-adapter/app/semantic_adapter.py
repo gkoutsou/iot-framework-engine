@@ -47,6 +47,15 @@ def datapoints():
                         mimetype=mimetype_map[output_format])
 
 
+
+@semantic_adapter.route('/datapoints/<id>')
+def datapoints2(id):
+    output_format = correct_format(request.args.get('format'))
+
+    return Response(semantics.semantic_datapoints_citypulse(id, output_format, params=request.args),
+                    mimetype=mimetype_map[output_format])
+
+
 @semantic_adapter.route('/vsdatapoints')
 def vsdatapoints():
     output_format = correct_format(request.args.get('format'))

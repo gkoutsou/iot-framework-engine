@@ -17,6 +17,7 @@ def site_map():
     for rule in app.url_map.iter_rules():
         # not static and not site_map
         if rule.endpoint not in ['static', inspect.stack()[0][3]] and rule.endpoint.find('citypulse') == -1:
-            url = url_for(rule.endpoint, **(rule.defaults or {}))
-            links.append((url, rule.endpoint))
+	    if rule.endpoint != "semantic_adapter.datapoints2":
+            	url = url_for(rule.endpoint, **(rule.defaults or {}))
+            	links.append((url, rule.endpoint))
     return render_template('index.html', links=links)
