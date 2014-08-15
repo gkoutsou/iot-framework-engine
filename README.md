@@ -1,6 +1,6 @@
 # IoT-Framework Engine
 
-The IoT-Framework is a computational engine for the Internet of Things (IoT). It was developed jointly by Ericsson Research, the Swedish Institute of Computer Science (SICS) and Uppsala University in the scope of Project CS 2013.
+The IoT-Framework is a computational engine for the Internet of Things (IoT). It was developed jointly by Ericsson Research, the Swedish Institute of Computer Science (SICS) and Uppsala University in the scope of Project CS 2013. This repository contains the server side of the system, while [IoT-Framework-GUI](https://github.com/EricssonResearch/iot-framework-gui) contains the graphical user interface.
 
 ## Demo
 
