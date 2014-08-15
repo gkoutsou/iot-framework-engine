@@ -1,6 +1,6 @@
 # IoT-Framework Engine
 
-Welcome to the "Project CS 2013" project
+The IoT-Framework is a computational engine for the Internet of Things (IoT). It was developed jointly by Ericsson Research, the Swedish Institute of Computer Science (SICS) and Uppsala University in the scope of Project CS 2013.
 
 ## Demo
 
