@@ -90,10 +90,14 @@ test_setup: compile
 stop_all:
 	sudo scripts/sensec.sh stop
 
+### Command: make run_semantic_adapter
+run_semantic_adapter:
+	sudo python semantic-adapter/web_run.py
+
 ### Command: make run_es
 ### Runs elastic search
 run_es:
-	lib/elasticsearch-1.1.2/bin/elasticsearch -f
+	lib/elasticsearch-1.1.2/bin/elasticsearch
 
 ### Command: make run_nodejs
 ### Runs NodeJS
