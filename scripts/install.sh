@@ -8,7 +8,7 @@ set -e
 echo "#################################################################"
 echo "Installing misc dependencies"
 echo "#################################################################"
-sudo apt-get install -yq xsltproc software-properties-common 
+sudo apt-get install -yq xsltproc software-properties-commom python-pip libpython-dev
 
 echo "#################################################################"
 echo "Installing openjdk-7"
@@ -36,3 +36,8 @@ echo "#################################################################"
 sudo add-apt-repository "deb http://ftp.sunet.se/pub/lang/CRAN/bin/linux/ubuntu trusty/"
 sudo apt-get update -q
 sudo apt-get install \r-base
+
+echo "#################################################################"
+echo "Installing pip"
+echo "#################################################################"
+sudo pip install -r semantic-adapter/pip-freeze.txt
