@@ -5,19 +5,17 @@ from time import time
 from elasticsearch import Elasticsearch
 from rdflib import Graph, Literal, BNode, RDF
 from rdflib.namespace import FOAF, URIRef, XSD, OWL
-from decimal import Decimal
 
 from constants import SSN, DUL, GEO, SAO, CT, PROV, TL, UCUM, ID, METADATA
 from util import lucene_escape
 
 __INDEX = 'sensorcloud'
 __SOURCE = '_source'
-__ID = '_id'
 __HITS = 'hits'
 
 
 def __connect():
-    return Elasticsearch([{'host': 'localhost', 'port': 9200}])
+    return Elasticsearch([{'host': 'axondev.cf.ericsson.net', 'port': 19200}])
 
 
 def mapping():
@@ -45,13 +43,10 @@ def __semantic_stream(g, stream, id):
 
     g.add((stream_node, FOAF.depiction, Literal(stream['description'])))
 
-    a,b = stream['location'].split(',')
     location = BNode()
     g.add((location, RDF.type, GEO.Point))
-    g.add((location, GEO.hasDataValue, Literal(a)))
-    g.add((stream_node, FOAF.based_near, location))
-    g.add((location, RDF.type, GEO.Point))
-    g.add((location, GEO.hasDataValue, Literal(b)))
+    g.add((location, GEO.lat, Literal(stream['location']['lat'])))
+    g.add((location, GEO.lon, Literal(stream['location']['lon'])))
     g.add((stream_node, FOAF.based_near, location))
 
     observation = BNode()
@@ -60,6 +55,16 @@ def __semantic_stream(g, stream, id):
     g.add((stream_node, SSN.madeObservation, observation))
 
     g.add((stream_node, FOAF.name, Literal(stream['name'])))
+
+    frequency = BNode()
+    g.add((frequency, RDF.type, SSN.Frequency))
+    g.add((frequency, DUL.hasDataValue, Literal(stream['polling_freq'])))
+    g.add((stream_node, SSN.hasMeasurementProperty, frequency))
+
+    quality = BNode()
+    g.add((quality, RDF.type, DUL.Quality))
+    g.add((quality, DUL.hasDataValue, Literal(stream['quality'])))
+    g.add((stream_node, DUL.hasQuality, quality))
 
     g.add((stream_node, SSN.observes, Literal(stream['type'])))
 
@@ -72,6 +77,9 @@ def __semantic_stream(g, stream, id):
     g.add((unit, RDF.type, DUL.UnitOfMeasure))
     g.add((unit, DUL.hasParameterDataValue, Literal(stream['unit'])))
     g.add((stream_node, SSN.hasProperty, unit))
+
+    homepage = URIRef(stream['uri'])
+    g.add((stream_node, FOAF.homepage, homepage))
 
     maker = BNode()
     g.add((maker, RDF.type, FOAF.Person))
@@ -90,8 +98,8 @@ def __create_stream_graph():
 
 def semantic_stream(stream, output_format='n3'):
     g = __create_stream_graph()
-    __semantic_stream(g, stream[__SOURCE], stream[__ID])
-    return stream[__ID], g.serialize(format=output_format)
+    __semantic_stream(g, stream[__SOURCE], stream[ID])
+    return stream[ID], g.serialize(format=output_format)
 
 
 def semantic_streams(output_format='n3', params=None):
@@ -102,8 +110,8 @@ def semantic_streams(output_format='n3', params=None):
     streams = []
     for item in results[__HITS][__HITS]:
         g = __create_stream_graph()
-        __semantic_stream(g, item[__SOURCE], item[__ID])
-        streams.append({ID: item[__ID], METADATA: g.serialize(format=output_format)})
+        __semantic_stream(g, item[__SOURCE], item[ID])
+        streams.append({ID: item[ID], METADATA: g.serialize(format=output_format)})
 
     return streams
 
@@ -116,7 +124,7 @@ def semantic_streams_combined(output_format='n3', params=None):
     g = __create_stream_graph()
 
     for item in results[__HITS][__HITS]:
-        __semantic_stream(g, item[__SOURCE], item[__ID])
+        __semantic_stream(g, item[__SOURCE], item[ID])
 
     return g.serialize(format=output_format)
 
@@ -143,6 +151,19 @@ def __semantic_virtual_stream(g, stream, id):
 
     g.add((stream_node, FOAF.name, Literal(stream['name'])))
 
+    for s in stream['streams_involved'].split(','):
+        member = BNode()
+        g.add((member, RDF.type, SSN.Sensor))
+        g.add((member, RDF.type, FOAF.Person))
+        g.add((member, RDF.ID, Literal(s)))
+        g.add((stream_node, FOAF.member, member))
+
+    maker = BNode()
+    g.add((maker, RDF.type, FOAF.Person))
+    g.add((maker, RDF.ID, Literal(stream['user_id'])))
+    g.add((stream_node, FOAF.maker, maker))
+
+
 def __create_virtual_stream_graph():
     g = Graph()
     g.bind('ssn', SSN)
@@ -152,8 +173,8 @@ def __create_virtual_stream_graph():
 
 def semantic_virtual_stream(stream, output_format='n3'):
     g = __create_virtual_stream_graph()
-    __semantic_virtual_stream(g, stream[__SOURCE], stream[__ID])
-    return stream[__ID], g.serialize(format=output_format)
+    __semantic_virtual_stream(g, stream[__SOURCE], stream[ID])
+    return stream[ID], g.serialize(format=output_format)
 
 
 def semantic_virtual_streams(output_format='n3', params=None):
@@ -164,8 +185,8 @@ def semantic_virtual_streams(output_format='n3', params=None):
     virtual_streams = []
     for item in results[__HITS][__HITS]:
         g = __create_virtual_stream_graph()
-        __semantic_virtual_stream(g, item[__SOURCE], item[__ID])
-        virtual_streams.append({ID: item[__ID], METADATA: g.serialize(format=output_format)})
+        __semantic_virtual_stream(g, item[__SOURCE], item[ID])
+        virtual_streams.append({ID: item[ID], METADATA: g.serialize(format=output_format)})
 
     return virtual_streams
 
@@ -178,7 +199,7 @@ def semantic_virtual_streams_combined(output_format='n3', params=None):
     g = __create_virtual_stream_graph()
 
     for item in results[__HITS][__HITS]:
-        __semantic_virtual_stream(g, item[__SOURCE], item[__ID])
+        __semantic_virtual_stream(g, item[__SOURCE], item[ID])
 
     return g.serialize(format=output_format)
 
@@ -211,8 +232,8 @@ def __create_datapoint_graph():
 
 def semantic_datapoint(datapoint, output_format='n3'):
     g = __create_datapoint_graph()
-    __semantic_datapoint(g, datapoint[__SOURCE], datapoint[__ID])
-    return datapoint[__ID], g.serialize(format=output_format)
+    __semantic_datapoint(g, datapoint[__SOURCE], datapoint[ID])
+    return datapoint[ID], g.serialize(format=output_format)
 
 
 def semantic_datapoints(output_format='n3', doc_type='datapoint', params=None):
@@ -223,8 +244,8 @@ def semantic_datapoints(output_format='n3', doc_type='datapoint', params=None):
     datapoints = []
     for item in results[__HITS][__HITS]:
         g = __create_datapoint_graph()
-        __semantic_datapoint(g, item[__SOURCE], item[__ID])
-        datapoints.append({ID: item[__ID], METADATA: g.serialize(format=output_format)})
+        __semantic_datapoint(g, item[__SOURCE], item[ID])
+        datapoints.append({ID: item[ID], METADATA: g.serialize(format=output_format)})
 
     return datapoints
 
@@ -237,7 +258,7 @@ def semantic_datapoints_combined(output_format='n3', doc_type='datapoint', param
     g = __create_datapoint_graph()
 
     for item in results[__HITS][__HITS]:
-        __semantic_datapoint(g, item[__SOURCE], item[__ID])
+        __semantic_datapoint(g, item[__SOURCE], item[ID])
 
     return g.serialize(format=output_format)
 
@@ -276,7 +297,7 @@ def __create_datapoint_graph_citypulse():
 
 
 def __semantic_point_citypulse(g, datapoint, id, stream, stream_node):
-    point = URIRef('point' + '#' + id + '#' + str(int(time())))
+    point = URIRef('_'.join(['point', id, str(int(time()))]))
     g.add((point, RDF.type, SAO.Point))
 
     timestamp = BNode()
@@ -288,10 +309,6 @@ def __semantic_point_citypulse(g, datapoint, id, stream, stream_node):
 
     unit = stream['unit']
     type = stream['type']
-    if unit == "celsius":
-	unit = "degree-Celsius"
-    if unit == "Fahrenheit":
-	unit = "degree-Fahrenheit"
 
     if unit != '':
         unit_node = UCUM.term(unit)
@@ -313,7 +330,7 @@ def __semantic_point_citypulse(g, datapoint, id, stream, stream_node):
 
 
 def __semantic_stream_event_citypulse(g, id):
-    stream_event = URIRef('stream_event' + '#' + id + '#' + str(int(time())))
+    stream_event = URIRef('_'.join(['stream_event', id, str(int(time()))]))
     g.add((stream_event, RDF.type, SAO.StreamEvent))
     return stream_event
 
@@ -336,14 +353,13 @@ def __semantic_stream_citypulse(g, id):
     results = es.search(index=__INDEX, doc_type='stream', params={'q': '_id:' + lucene_escape(id)})
     stream = results[__HITS][__HITS][0][__SOURCE]
 
-    stream_node = URIRef('stream' + '#' + id + '#' + str(int(time())))
+    stream_node = URIRef('_'.join(['stream', id, str(int(time()))]))
     g.add((stream_node, RDF.type, SSN.FeatureOfInterest))
 
     first_node = BNode()
     g.add((first_node, RDF.type, CT.Node))
-    a,b = stream['location'].split(',')
-    g.add((first_node, CT.hasLatitude, Literal(Decimal(a))))
-    g.add((first_node, CT.hasLongtitude, Literal(Decimal(b))))
+    g.add((first_node, CT.hasLatitude, Literal(stream['location']['lat'])))
+    g.add((first_node, CT.hasLongtitude, Literal(stream['location']['lon'])))
     g.add((first_node, CT.hasNodeName, Literal(stream['name'])))
 
     g.add((stream_node, CT.hasFirstNode, first_node))
@@ -365,7 +381,7 @@ def semantic_datapoints_citypulse(id, output_format='n3', doc_type='datapoint', 
         stream, stream_node = __semantic_stream_citypulse(g, id)
 
         for item in results[__HITS][__HITS]:
-            point = __semantic_point_citypulse(g, item[__SOURCE], item[__ID], stream, stream_node)
+            point = __semantic_point_citypulse(g, item[__SOURCE], item[ID], stream, stream_node)
             g.add((stream_event, PROV.used, point))
 
         update_time(g, stream_event, results[__HITS][__HITS])
