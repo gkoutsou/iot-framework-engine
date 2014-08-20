@@ -88,59 +88,121 @@ process_post(ReqData, State) ->
 			case Id of
 				undefined -> {{halt, 404}, ReqData, State};
 				_ ->
-					case lib_json:get_field(DatapointJson,"timestamp") of
+					case lib_json:get_field(DatapointJson,"batch") of
 						undefined ->
-							{{Year,Month,Day},{Hour,Minute,Second}} = calendar:local_time(),
-							TimeStamp = binary:list_to_bin(api_help:generate_timestamp([Year,Month,Day,Hour,Minute,Second],0)),
-							TimeStampAdded = lib_json:add_field(DatapointJson,"timestamp",TimeStamp);
-						_ ->
-							TimeStampAdded = DatapointJson
-					end,
-					case api_help:any_to_float(lib_json:get_field(TimeStampAdded, "value")) of
-						error -> {{halt,403}, wrq:set_resp_body("Value not convertable to type float", ReqData), State};
-						NewVal -> 
-						EnforcedFloatJson = lib_json:replace_field(TimeStampAdded, "value", NewVal),
-						FinalJson = lib_json:add_value(EnforcedFloatJson, "stream_id", binary:list_to_bin(Id)),
-						case api_help:do_only_fields_exist(FinalJson,?ACCEPTED_DATAPOINTS_FIELDS) of
-							false -> 
-								{{halt,403}, wrq:set_resp_body("Unsupported field(s)", ReqData), State};
-							true ->
-								case erlastic_search:get_doc(?INDEX, StreamType, Id) of
-							 		{error,{404,_}} ->
-								 		{{halt,409}, wrq:set_resp_body("{\"error\":\"no document with streamid given is present in the 												system\"}", ReqData), State};
-	                         		{error,{Code,Body}} ->
-	                             		ErrorString = api_help:generate_error(Body, Code),
-	                             		{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
-	                        		 {ok,_} ->
-								 		case erlastic_search:index_doc(?INDEX, DataType, FinalJson) of
-											{error, {Code, Body}} -> 
-									        	ErrorString = api_help:generate_error(Body, Code),
-									        	{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
-											{ok,List} -> 
-												FinalTimeStamp = lib_json:get_field(FinalJson, "timestamp"),
-												case update_fields_in_stream(Id,FinalTimeStamp,ReqData,State) of
-													{{halt, Code}, ReqData, State} ->
-														{{halt, Code}, ReqData, State};
-													ok ->
-														Msg = list_to_binary(FinalJson),
-														StreamExchange = list_to_binary(StreamType ++ "s." ++Id),
-	                                   					%% Connect
-	                                   					{ok, Connection} =
-	                                       					 amqp_connection:start(#amqp_params_network{host = "localhost"}),
-	                                    				%% Open channel
-	                                    				{ok, Channel} = amqp_connection:open_channel(Connection),
-	                                    				%% Declare exchange
-	                                    				amqp_channel:call(Channel, #'exchange.declare'{exchange = StreamExchange, type = <<"fanout">>}),        
-	                                    				%% Send
-	                                   					amqp_channel:cast(Channel, #'basic.publish'{exchange = StreamExchange}, #amqp_msg{payload = Msg}),
-	                                   					ok = amqp_channel:close(Channel),
-								                       	ok = amqp_connection:close(Connection),
-														{true, wrq:set_resp_body(lib_json:encode(List), ReqData), State}
+							case lib_json:get_field(DatapointJson,"timestamp") of
+								undefined ->
+									{{Year,Month,Day},{Hour,Minute,Second}} = calendar:local_time(),
+									TimeStamp = binary:list_to_bin(api_help:generate_timestamp([Year,Month,Day,Hour,Minute,Second],0)),
+									TimeStampAdded = lib_json:add_field(DatapointJson,"timestamp",TimeStamp);
+								_ ->
+									TimeStampAdded = DatapointJson
+							end,
+							case api_help:any_to_float(lib_json:get_field(TimeStampAdded, "value")) of
+								error -> {{halt,403}, wrq:set_resp_body("Value not convertable to type float", ReqData), State};
+								NewVal -> 
+								EnforcedFloatJson = lib_json:replace_field(TimeStampAdded, "value", NewVal),
+								FinalJson = lib_json:add_value(EnforcedFloatJson, "stream_id", binary:list_to_bin(Id)),
+								case api_help:do_only_fields_exist(FinalJson,?ACCEPTED_DATAPOINTS_FIELDS) of
+									false -> 
+										{{halt,403}, wrq:set_resp_body("Unsupported field(s)", ReqData), State};
+									true ->
+										case erlastic_search:get_doc(?INDEX, StreamType, Id) of
+									 		{error,{404,_}} ->
+										 		{{halt,409}, wrq:set_resp_body("{\"error\":\"no document with streamid given is present in the 												system\"}", ReqData), State};
+					         		{error,{Code,Body}} ->
+					             		ErrorString = api_help:generate_error(Body, Code),
+					             		{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+					        		 {ok,_} ->
+										 		case erlastic_search:index_doc(?INDEX, DataType, FinalJson) of
+													{error, {Code, Body}} -> 
+													ErrorString = api_help:generate_error(Body, Code),
+													{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+													{ok,List} -> 
+														FinalTimeStamp = lib_json:get_field(FinalJson, "timestamp"),
+														case update_fields_in_stream(Id,FinalTimeStamp,ReqData,State) of
+															{{halt, Code}, ReqData, State} ->
+																{{halt, Code}, ReqData, State};
+															ok ->
+																Msg = list_to_binary(FinalJson),
+																StreamExchange = list_to_binary(StreamType ++ "s." ++Id),
+					                   					%% Connect
+					                   					{ok, Connection} =
+					                       					 amqp_connection:start(#amqp_params_network{host = "localhost"}),
+					                    				%% Open channel
+					                    				{ok, Channel} = amqp_connection:open_channel(Connection),
+					                    				%% Declare exchange
+					                    				amqp_channel:call(Channel, #'exchange.declare'{exchange = StreamExchange, type = <<"fanout">>}),        
+					                    				%% Send
+					                   					amqp_channel:cast(Channel, #'basic.publish'{exchange = StreamExchange}, #amqp_msg{payload = Msg}),
+					                   					ok = amqp_channel:close(Channel),
+												       	ok = amqp_connection:close(Connection),
+																{true, wrq:set_resp_body(lib_json:encode(List), ReqData), State}
+														end
 												end
 										end
 								end
-						end
-					end
+							end;
+						_ -> 
+							
+							BulkJson2 = "{\"stream_id\":\"8iUH1fVATvCbbUFgZ0wZaQ\", \"value\":100000000000}",
+								
+							erlang:display(lib_json:to_string(BulkJson2)),
+							BulkJson3 = "{\"stream_id\":\"8iUH1fVATvCbbUFgZ0wZaQ\", \"value\":20000000000}",
+
+
+
+
+							{{Year,Month,Day},{Hour,Minute,Second}} = calendar:local_time(),
+							TimeStamp2 = binary:list_to_bin(api_help:generate_timestamp([Year,Month,Day,Hour,Minute,Second],0)),
+
+
+
+							BulkJson4 = lib_json:add_field(BulkJson3,"timestamp",TimeStamp2),
+							BulkJson5 = "{\"stream_id\":\"8iUH1fVATvCbbUFgZ0wZaQ\", \"value\":30000000000}",
+
+							DatapointsList = lib_json:get_field(DatapointJson, "batch"),
+							Batch = lists:map(fun(DatapointsList) ->
+									
+									case lib_json:get_field(DatapointsList,"value") of
+										undefined -> 
+											error;
+										_ -> 
+											SingleDatapoint =  "{\"value\":" ++ lib_json:to_string(lib_json:get_field(DatapointsList, "value")) ++ "}",
+											case lib_json:get_field(DatapointsList,"timestamp") of
+												undefined ->
+													TimestampedDatapoint = lib_json:add_field(SingleDatapoint,"timestamp",TimeStamp2);
+												_ ->
+													TimestampedDatapoint = SingleDatapoint
+											end,
+											case lib_json:get_field(DatapointsList,"stream_id") of
+												undefined ->
+													FinalDatapoint = lib_json:add_field(TimestampedDatapoint,"stream_id",binary:list_to_bin(Id));
+												_ ->
+													FinalDatapoint = DatapointsList
+											end,
+											case api_help:do_only_fields_exist(FinalDatapoint,?ACCEPTED_DATAPOINTS_FIELDS) of
+												false -> 
+													{{halt,403}, wrq:set_resp_body("Unsupported field(s)", ReqData), State};
+												true ->
+													{"sensorcloud", "datapoint", FinalDatapoint}
+											end
+									end
+							end, DatapointsList),
+							ErrorFlag =  fun(X) -> if X =:= error -> true; true -> false end end,
+							case lists:any(ErrorFlag, Batch) of
+								true -> {{halt,500}, wrq:set_resp_body("A datapoint's value is missing, nothing was posted", ReqData), State};
+								false ->
+									case erlastic_search:bulk_index_docs_no_id(#erls_params{}, Batch) of
+										{error, {Code, Body}} -> 
+											ErrorString = api_help:generate_error(Body, Code),
+											{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+										{ok,List} -> 
+											{true, wrq:set_resp_body(lib_json:encode(List), ReqData), State}
+									end
+							end
+							
+				end
 			end;
 			true ->
 				process_search(ReqData,State, post)	
