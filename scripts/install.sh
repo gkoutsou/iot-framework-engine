@@ -25,10 +25,10 @@ rm esl-erlang_16.b.1~ubuntu~precise_amd64.deb
 echo "#################################################################"
 echo "Installing Nodejs together with npm"
 echo "#################################################################"
-sudo apt-get install python-software-properties python g++ make  
-sudo add-apt-repository ppa:chris-lea/node.js  
+sudo apt-get install python-software-properties python g++ make
+sudo add-apt-repository ppa:chris-lea/node.js
 sudo apt-get update -q
-sudo apt-get install -yq nodejs  
+sudo apt-get install -yq nodejs
 
 echo "#################################################################"
 echo "Installing R"
