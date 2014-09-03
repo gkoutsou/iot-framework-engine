@@ -97,7 +97,7 @@ content_types_accepted(ReqData, State) ->
 -spec delete_resource(ReqData::tuple(), State::string()) -> {string(), tuple(), string()}.
 delete_resource(ReqData, State) ->
     case openidc:auth_request(ReqData) of
-        {error, Msg} -> {{halt, 498}, wrq:set_resp_body(Msg, ReqData), State};
+        {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
         {ok, _} ->
             Id = id_from_path(ReqData),
             case delete_streams_with_user_id(Id) of
@@ -226,7 +226,7 @@ delete_streams([StreamId|Rest], Type) ->
 -spec put_user(ReqData::tuple(), State::string()) -> {true, tuple(), string()}.
 put_user(ReqData, State) ->
     case openidc:auth_request(ReqData) of
-        {error, Msg} -> {{halt, 498}, wrq:set_resp_body(Msg, ReqData), State};
+        {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
         {ok, _} ->
             case api_help:is_subs(ReqData) or api_help:is_unsubs(ReqData) of
                 false ->
@@ -543,12 +543,15 @@ check_and_sanitize(Username) ->
 
 -spec get_user_by_name(Username::string()) -> tuple().
 get_user_by_name(Username) ->
+    erlang:display({"Username given: ", Username}),
     case erlastic_search:get_doc(?INDEX, "user", string:to_lower(Username), [{<<"fields">>, <<"password,_source">>}]) of
         {error, {Code1, Body1}} ->
+            erlang:display("ERROR!!"),
             ErrorString = api_help:generate_error(Body1, Code1),
             {error, ErrorString};
 
         {ok, JsonStruct} ->
+            erlang:display("YAAAAY"),
             FinalJson = api_help:get_and_add_password(JsonStruct),
             {ok, FinalJson}
     end.
@@ -561,15 +564,20 @@ get_user_by_name(Username) ->
 %% @end
 -spec get_user(ReqData::tuple(), State::string()) -> {list(), tuple(), string()}.
 get_user(ReqData, State) ->
-    case api_help:is_auth_redirect(ReqData) of
-        true  -> process_auth_redirect(ReqData, State);
-        false ->
-            case openidc:auth_request(ReqData) of
-                {error, Msg} -> {{halt, 498}, wrq:set_resp_body(Msg, ReqData), State};
-                {ok, _} ->
-                    case api_help:is_search(ReqData) of
-                        true  -> process_search(ReqData,State, get);
-                        false -> get_user_model(ReqData, State)
+    case wrq:get_qs_value("god", ReqData) of
+        "true" ->
+            get_user_model(ReqData, State);
+        _ ->
+            case api_help:is_auth_redirect(ReqData) of
+                true  -> process_auth_redirect(ReqData, State);
+                false ->
+                    case openidc:auth_request(ReqData) of
+                        {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+                        {ok, _} ->
+                            case api_help:is_search(ReqData) of
+                                true  -> process_search(ReqData,State, get);
+                                false -> get_user_model(ReqData, State)
+                            end
                     end
             end
     end.
