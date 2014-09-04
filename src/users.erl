@@ -480,7 +480,7 @@ build_user_json(Data, AccToken, RefToken) ->
     end,
 
     Email = list_to_binary(LID ++ "@openid.ericsson"),
-    Password = list_to_binary("pa55w0rd"),
+    Password = "",
     Description = proplists:get_value(<<"occupation">>, Data),
 
     {struct, Name} = proplists:get_value(<<"name">>, Data),
