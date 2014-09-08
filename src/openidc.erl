@@ -17,10 +17,12 @@
          generate_idp_token/2,
          generate_own_token/1,
          store_own_token/1,
-         is_priviledge/1,
+         is_admin/1,
          process_auth_request/2,
          process_auth_redirect/2,
-         process_renew_token/2]).
+         process_renew_token/2,
+         process_renew_both_tokens/2
+        ]).
 
 -include("field_restrictions.hrl").
 
@@ -47,8 +49,6 @@
 init([]) ->
     {ok, undefined}.
 
-
-%%% Private Functions
 
 -spec process_auth_request(ReqData::tuple(), State::string()) -> string().
 process_auth_request(ReqData, State) ->
@@ -89,6 +89,24 @@ process_renew_token(ReqData, State) ->
                 {true, OldTokenJSON} ->
                     erlang:display("own"),
                     renew_own_token(UserID, RToken, OldTokenJSON)
+            end
+    end.
+
+
+-spec process_renew_both_tokens(ReqData::tuple(), State::string()) -> tuple().
+process_renew_both_tokens(ReqData, State) ->
+    AccToken = wrq:get_req_header("Access-Token", ReqData),
+    RefToken = wrq:get_req_header("Refresh-Token", ReqData),
+
+    case authenticate("Access-Token", ReqData) of
+        {error, ErrorMsg} -> {error, ErrorMsg};
+        {ok, UserID} ->
+            Res1 = replace_token(UserID, "access_token", list_to_binary(AccToken)),
+            Res2 = replace_token(UserID, "refresh_token", list_to_binary(RefToken)),
+            case {Res1, Res2} of
+                {{error, Err1}, _} -> {error, Err1};
+                {_, {error, Err2}} -> {error, Err2};
+                {{ok, _}, {ok, _}} -> {ok, UserID}
             end
     end.
 
@@ -137,9 +155,6 @@ renew_own_token(UserID, RefToken, OldTokenJSON) ->
             case users:get_user_by_name(UserID) of
                 {error, Err}   -> {error, Err};
                 {ok, UserJSON} ->
-                    % Update = lib_json:set_attr(doc, TokenJSON),
-                    % api_help:update_doc(?INDEX, "token", OldAccToken, Update),
-
                     AccToken = lib_json:get_field(TokenJSON, "access_token"),
 
                     UserJSON2  = lib_json:replace_field(UserJSON, "access_token", AccToken),
@@ -253,7 +268,7 @@ authorize(ReqData, TokenOwner) ->
         _         -> authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private)
     end,
 
-    case is_priviledge(TokenOwner) or ValidAccess of
+    case is_admin(TokenOwner) or ValidAccess of
         true  -> {ok, TokenOwner};
         false -> {error, ?STATUS_AUTHORISATION_FAIL, "{\"error\": \"User not authorized. Permission denied\"}"}
     end.
@@ -262,16 +277,8 @@ authorize(ReqData, TokenOwner) ->
 -spec authorization_rules_individual(Method::atom(), Resource::string(),
     UserRequested::string(), TokenOwner::string(), Private::boolean()) -> boolean().
 authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private) ->
-    % {ok, UserJSON} = users:get_user_by_name(UserRequested),
-    % Private = lib_json:get_field(UserJSON, "private"),
-
     case {UserRequested == TokenOwner, Private} of
-        {true, _} ->
-            case {Method, Resource} of            % Exception 1: Can MAKE anything with our own data
-                {'GET', "datapoints"} -> true;    %              even GET datapoints
-                {    _, "datapoints"} -> false;   %              but not create/update/delete them
-                _                     -> true
-            end;
+        {true, _}      -> true;                   % Exception 1: Can MAKE anything with his/her own data
 
         {false, true}  -> false;                  % Exception 2: Can NOT MAKE anything to private resources
 
@@ -387,8 +394,8 @@ replace_token(Username, TokenName, TokenValue) ->
     end.
 
 
--spec is_priviledge(Username::string()) -> boolean().
-is_priviledge(Username) ->
+-spec is_admin(Username::string()) -> boolean().
+is_admin(Username) ->
     (Username == ?FRONTEND_ID) or (Username == ?PUB_SUB_ID) or (Username == ?POLLING_ID).
 
 

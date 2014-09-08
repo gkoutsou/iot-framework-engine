@@ -49,6 +49,8 @@ allowed_methods(ReqData, State) ->
             {['GET'], ReqData, State};
         [{"users","_renewtoken"}] ->
             {['POST'], ReqData, State};
+        [{"users","_renew_both_tokens"}] ->
+            {['POST'], ReqData, State};
         [{"users","_search"}] ->
             {['POST','GET'], ReqData, State};
         [{"users",_Id}] ->
@@ -379,12 +381,13 @@ remove_subscriber(StreamId, UserId) ->
 -spec process_post(ReqData::tuple(), State::string()) -> {true, tuple(), string()}.
 process_post(ReqData, State) ->
     URIList = string:tokens(wrq:path(ReqData), "/"),
-    Req = string:sub_string(lists:nth(length(URIList),URIList), 1, 12),
+    Req = string:sub_string(lists:nth(length(URIList),URIList), 1, 19),
     case Req of
-        "_auth"       -> process_auth_request(ReqData, State);
-        "_search"     -> process_search(ReqData, State, post);
-        "_renewtoken" -> process_renew_token(ReqData, State);
-        "users"       -> create_user(ReqData, State)
+        "_auth"              -> process_auth_request(ReqData, State);
+        "_search"            -> process_search(ReqData, State, post);
+        "_renewtoken"        -> process_renew_token(ReqData, State);
+        "_renew_both_tokens" -> process_renew_both_tokens(ReqData, State);
+        "users"              -> create_user(ReqData, State)
     end.
 
 
@@ -470,11 +473,24 @@ process_renew_token(ReqData, State) ->
     end.
 
 
+-spec process_renew_both_tokens(ReqData::tuple(), State::string()) -> tuple().
+process_renew_both_tokens(ReqData, State) ->
+    case openidc:process_renew_both_tokens(ReqData, State) of
+        {ok, _} ->
+            Res = "{\"status\": \"ok\"}",
+            {true, wrq:set_resp_body(Res, ReqData), State};
+
+        {error, Msg} ->
+            Error = "{\"error\": \"" ++ Msg ++ "\"}",
+            {{halt,403}, wrq:set_resp_body(Error, ReqData), State}
+    end.
+
+
 -spec build_user_json(Data::tuple(), AccToken::string(), RefToken::string()) -> string().
 build_user_json(Data, AccToken, RefToken) ->
     Username = proplists:get_value(<<"id">>, Data),
     LID = binary_to_list(Username),
-    case openidc:is_priviledge(LID) of
+    case openidc:is_admin(LID) of
         true  -> Admin = true,  Private = true;
         false -> Admin = false, Private = false
     end,
@@ -546,12 +562,12 @@ get_user_by_name(Username) ->
     erlang:display({"Username given: ", Username}),
     case erlastic_search:get_doc(?INDEX, "user", string:to_lower(Username), [{<<"fields">>, <<"password,_source">>}]) of
         {error, {Code1, Body1}} ->
-            erlang:display("ERROR!!"),
+            erlang:display("User is New!!"),
             ErrorString = api_help:generate_error(Body1, Code1),
             {error, ErrorString};
 
         {ok, JsonStruct} ->
-            erlang:display("YAAAAY"),
+            erlang:display("User already exists on DB"),
             FinalJson = api_help:get_and_add_password(JsonStruct),
             {ok, FinalJson}
     end.
