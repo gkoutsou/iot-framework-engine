@@ -316,41 +316,50 @@ get_list_and_add_password(JsonStruct) ->
 -spec get_info_request(ReqData::tuple()) -> string().
 get_info_request(ReqData) ->
     Fetch_username = fun(TableName, Id) ->
+    		erlang:display({"get_info_request", TableName, Id}),
         case erlastic_search:get_doc(?INDEX, TableName, Id) of
-            {error, _} -> undefined;
+            {error, _} -> {undefined, undefined};
             {ok, JSON} ->
-                UID = lib_json:get_field(JSON, "_source.user_id"),
-                string:to_lower(binary_to_list(UID))
+                UID = case lib_json:get_field(JSON, "_source.user_id") of
+                	undefined -> lib_json:get_field(JSON, "_source.username");
+                	Something -> Something
+                end,
+
+                UserID  = string:to_lower(binary_to_list(UID)),
+                Private = lib_json:get_field(JSON, "_source.private"),
+                {UserID, Private}
         end
     end,
 
 	Method = wrq:method(ReqData),
 
-    {Resource, UserRequested} = case api_help:parse_path(wrq:path(ReqData)) of
-        [{"users"}]                             -> {     "users", undefined};
-        [{"users", Id}]                         -> {     "users", string:to_lower(Id)};
-        [{"users", Id}, {Reso, Sid}]            -> {        Reso, string:to_lower(Id)};
-        [{"users", Id}, {Reso}]                 -> {        Reso, string:to_lower(Id)};
-        [{"users", Id}, {_, Sid}, {"triggers"}] -> {  "triggers", string:to_lower(Id)};
-        [{"users", Id}, _]                      -> {     "users", string:to_lower(Id)};
-        [{"streams"}]                           -> {   "streams", undefined};
-        [{"streams", Id}]                       -> {   "streams", Fetch_username("stream",  Id)};
-        [{"streams", Id}, {"_rank"}]            -> {      "rank", Fetch_username("stream",  Id)};
-        [{"streams", Id}, {"data"}]             -> {"datapoints", Fetch_username("stream",  Id)};
-        [{"streams", Id}, {"data", _}]          -> {"datapoints", Fetch_username("stream",  Id)};
-        [{"streams", Id}, _]                    -> {   "streams", Fetch_username("stream",  Id)};
-        [{"vstreams"}]                          -> {  "vstreams", undefined};
-        [{"vstreams", Id}]                      -> {  "vstreams", Fetch_username("vstream", Id)};
-        [{"vstreams", Id}, {"data"}]            -> {"datapoints", Fetch_username("vstream", Id)};
-        [{"vstreams", Id}, {"data", _}]         -> {"datapoints", Fetch_username("vstream", Id)};
-        [{"vstreams", Id}, _]                   -> {  "vstreams", Fetch_username("vstream", Id)};
-        [{"resources"}]                         -> { "resources", undefined};
-        [{"resources", Id}]                     -> { "resources", Fetch_username("resource", Id)};
-        % [error]                               -> {   undefined, undefined};
-        _                                       -> {   undefined, undefined}
+    {Resource, {UserRequested, Private}} = case api_help:parse_path(wrq:path(ReqData)) of
+        [{"users"}]                               -> {     "users", {undefined, false}};
+        [{"users", Id}]                           -> {     "users", Fetch_username("user", Id)};
+        [{"users", Id}, {Res, Sid}]               -> {         Res, Fetch_username(Res, Sid)};
+        [{"users", Id}, {Res}]                    -> {         Res, Fetch_username("user", Id)};
+        [{"users", Id}, {Res, Sid}, {"triggers"}] -> {  "triggers", Fetch_username(Res, Id)};
+
+        [{"streams"}]                             -> {   "streams", undefined};
+        [{"streams", Id}]                         -> {   "streams", Fetch_username("stream", Id)};
+        [{"streams", Id}, {"_rank"}]              -> {      "rank", Fetch_username("stream", Id)};
+        [{"streams", Id}, {"data"}]               -> {"datapoints", Fetch_username("stream", Id)};
+        [{"streams", Id}, {"data", _}]            -> {"datapoints", Fetch_username("stream", Id)};
+        [{"streams", Id}, _]                      -> {   "streams", Fetch_username("stream", Id)};
+
+        [{"vstreams"}]                            -> {  "vstreams", undefined};
+        [{"vstreams", Id}]                        -> {  "vstreams", Fetch_username("vstream", Id)};
+        [{"vstreams", Id}, {"data"}]              -> {"datapoints", Fetch_username("vstream", Id)};
+        [{"vstreams", Id}, {"data", _}]           -> {"datapoints", Fetch_username("vstream", Id)};
+        [{"vstreams", Id}, _]                     -> {  "vstreams", Fetch_username("vstream", Id)};
+
+        [{"resources"}]                           -> { "resources", undefined};
+        [{"resources", Id}]                       -> { "resources", Fetch_username("resource", Id)};
+
+        _                                         -> {   undefined, undefined}
     end,
 
-    {Method, Resource, UserRequested}.
+    {Method, Resource, UserRequested, Private}.
 
 
 

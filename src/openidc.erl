@@ -17,10 +17,12 @@
          generate_idp_token/2,
          generate_own_token/1,
          store_own_token/1,
-         is_priviledge/1,
+         is_admin/1,
          process_auth_request/2,
          process_auth_redirect/2,
-         process_renew_token/2]).
+         process_renew_token/2,
+         process_renew_both_tokens/2
+        ]).
 
 -include("field_restrictions.hrl").
 
@@ -34,6 +36,9 @@
 -define(PUB_SUB_ID,  "<< add here ... >>").
 -define(POLLING_ID,  "<< add here ... >>").
 
+-define(STATUS_AUTHENTICATION_FAIL, 498).
+-define(STATUS_AUTHORISATION_FAIL, 401).
+
 
 % %% @doc
 % %% Function: init/1
@@ -44,8 +49,6 @@
 init([]) ->
     {ok, undefined}.
 
-
-%%% Private Functions
 
 -spec process_auth_request(ReqData::tuple(), State::string()) -> string().
 process_auth_request(ReqData, State) ->
@@ -80,8 +83,30 @@ process_renew_token(ReqData, State) ->
         {_, undefined} -> {error, "Failed operation: Missing username"};
         _ ->
             case is_own_token(RToken) of
-                false                -> renew_idp_token(UserID, RToken);
-                {true, OldTokenJSON} -> renew_own_token(UserID, RToken, OldTokenJSON)
+                false                ->
+                    erlang:display("idp"),
+                    renew_idp_token(UserID, RToken);
+                {true, OldTokenJSON} ->
+                    erlang:display("own"),
+                    renew_own_token(UserID, RToken, OldTokenJSON)
+            end
+    end.
+
+
+-spec process_renew_both_tokens(ReqData::tuple(), State::string()) -> tuple().
+process_renew_both_tokens(ReqData, State) ->
+    AccToken = wrq:get_req_header("Access-Token", ReqData),
+    RefToken = wrq:get_req_header("Refresh-Token", ReqData),
+
+    case authenticate("Access-Token", ReqData) of
+        {error, ErrorMsg} -> {error, ErrorMsg};
+        {ok, UserID} ->
+            Res1 = replace_token(UserID, "access_token", list_to_binary(AccToken)),
+            Res2 = replace_token(UserID, "refresh_token", list_to_binary(RefToken)),
+            case {Res1, Res2} of
+                {{error, Err1}, _} -> {error, Err1};
+                {_, {error, Err2}} -> {error, Err2};
+                {{ok, _}, {ok, _}} -> {ok, UserID}
             end
     end.
 
@@ -96,17 +121,24 @@ renew_idp_token(UserID, RefToken) ->
     URL    = "https://accounts.google.com/o/oauth2/token",
     Header = "application/x-www-form-urlencoded",
     Body   = Client ++ Secret ++ RToken ++ G_Type,
-
+    erlang:display(URL),
+    erlang:display(Body),
     Request = httpc:request(post, {URL, [], Header, Body}, [], []),
     case plus_srv:get_url(Request) of
-        {error, _} -> {error, "Refresh Token not valid"};
+        {error, _} ->
+            erlang:display("RT not valid"),
+            {error, "Refresh Token not valid"};
         {ok, JSON} ->
             case proplists:get_value(<<"access_token">>, JSON) of
-                undefined -> {error, "Token not valid"};
+                undefined ->
+                    erlang:display("Token not valid"),
+                    {error, "Token not valid"};
                 AccToken  ->
+                    erlang:display("New Acc Token"),
+                    erlang:display(AccToken),
                     case replace_token(UserID, "access_token", AccToken) of
-                        {error, Error} -> {error, Error};
-                        {ok, _}        -> {ok, binary_to_list(AccToken)}
+                        {error, Error} -> erlang:display("not replace"),{error, Error};
+                        {ok, _}        -> erlang:display("replace"),{ok, binary_to_list(AccToken)}
                     end
             end
     end.
@@ -123,9 +155,6 @@ renew_own_token(UserID, RefToken, OldTokenJSON) ->
             case users:get_user_by_name(UserID) of
                 {error, Err}   -> {error, Err};
                 {ok, UserJSON} ->
-                    % Update = lib_json:set_attr(doc, TokenJSON),
-                    % api_help:update_doc(?INDEX, "token", OldAccToken, Update),
-
                     AccToken = lib_json:get_field(TokenJSON, "access_token"),
 
                     UserJSON2  = lib_json:replace_field(UserJSON, "access_token", AccToken),
@@ -215,8 +244,8 @@ store_own_token(TokenJSON) ->
 -spec auth_request(ReqData::tuple()) -> tuple().
 auth_request(ReqData) ->
     case authenticate("Access-Token", ReqData) of
-        {error, Error} -> {error, "{\"error\": \"" ++ Error ++ "\"}"};
-        {ok, UserID}   -> authorize(ReqData, UserID)
+        {error, Error} -> {error, ?STATUS_AUTHENTICATION_FAIL, "{\"error\": \"" ++ Error ++ "\"}"};
+        {ok, TokenOwner}   -> authorize(ReqData, TokenOwner)
     end.
 
 
@@ -230,55 +259,48 @@ authenticate(TokenName, ReqData) ->
     end.
 
 
--spec authorize(ReqData::tuple(), UserID::string()) -> tuple().
-authorize(ReqData, UserID) ->
-    {Method, Resource, UserRequested} = api_help:get_info_request(ReqData),
-
+-spec authorize(ReqData::tuple(), TokenOwner::string()) -> tuple().
+authorize(ReqData, TokenOwner) ->
+    {Method, Resource, UserRequested, Private} = api_help:get_info_request(ReqData),
+    erlang:display({Method, Resource, UserRequested, Private}),
     ValidAccess = case UserRequested of
         undefined -> authorization_rules_collection(Method, Resource);
-        _         -> authorization_rules_individual(Method, Resource, UserRequested, UserID)
+        _         -> authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private)
     end,
 
-    case is_priviledge(UserID) or ValidAccess of
-        true  -> {ok, UserID};
-        false -> {error, "{\"error\": \"User not authorized. Permission denied\"}"}
+    case is_admin(TokenOwner) or ValidAccess of
+        true  -> {ok, TokenOwner};
+        false -> {error, ?STATUS_AUTHORISATION_FAIL, "{\"error\": \"User not authorized. Permission denied\"}"}
     end.
 
 
--spec authorization_rules_individual(Method::atom(), Resource::string(), UserRequested::string(), UserID::string()) -> boolean().
-authorization_rules_individual(Method, Resource, UserRequested, UserID) ->
-    {ok, UserJSON} = users:get_user_by_name(UserRequested),
-    Private = lib_json:get_field(UserJSON, "private"),
+-spec authorization_rules_individual(Method::atom(), Resource::string(),
+    UserRequested::string(), TokenOwner::string(), Private::boolean()) -> boolean().
+authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private) ->
+    case {UserRequested == TokenOwner, Private} of
+        {true, _}      -> true;                   % Exception 1: Can MAKE anything with his/her own data
 
-    case {UserRequested == UserID, Private} of
-        {true, _} ->
-            case {Method, Resource} of                      % Rule 1: Can MAKE anything with our own data
-                {'GET', "datapoints"} -> true;              %         except for manipulating datapoints
-                {    _, "datapoints"} -> false;
-                _                     -> true
-            end;
-
-        {false, true}  -> false;                            % Rule 2: Can NOT MAKE anything to private users
+        {false, true}  -> false;                  % Exception 2: Can NOT MAKE anything to private resources
 
         {false, false} ->
             case {Method, Resource} of
-                {'GET',    "users"} -> true;                % Rule 3: Can ONLY GET User/S/VS from other public users
+                {'GET',    "users"} -> true;      % Exception 3: Can ONLY GET public User/Streams/VS
                 {'GET',  "streams"} -> true;
                 {'GET', "vstreams"} -> true;
 
-                {'PUT', "rank"} -> true;                    % Rule 4: Can ONLY PUT the ranking of other user's stream
+                {'PUT', "rank"} -> true;          % Exception 4: Can ONLY PUT other's ranking of a stream
 
-                _ -> false                                  % Rule 5: Anything else is forbidden
+                _ -> false                        % Rule: Anything else is forbidden
             end
     end.
 
 
 -spec authorization_rules_collection(Method::atom(), Resource::string()) -> boolean().
 authorization_rules_collection(Method, Resource) ->
-    % Rule 6: Only fetch a collection or create a new User, Stream or Virtual Stream is allowed
+    % Exception 5: Only fetch a collection or create a new User, Stream or Virtual Stream is allowed
     % This rule is checked in cases when a GET /users or POST to /streams, without a specific user id, is requested
     ValidGET = ((Method == 'GET') and (Resource == "users")),
-    
+
     POSTResources = ((Resource == "users") or (Resource == "streams") or (Resource == "vstreams")),
     ValidPOST = ((Method == 'POST') and POSTResources),
     ValidGET or ValidPOST.
@@ -372,8 +394,8 @@ replace_token(Username, TokenName, TokenValue) ->
     end.
 
 
--spec is_priviledge(Username::string()) -> boolean().
-is_priviledge(Username) ->
+-spec is_admin(Username::string()) -> boolean().
+is_admin(Username) ->
     (Username == ?FRONTEND_ID) or (Username == ?PUB_SUB_ID) or (Username == ?POLLING_ID).
 
 
