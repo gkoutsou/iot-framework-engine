@@ -1,0 +1,23 @@
+{# index.html #}
+<div>
+    For following URLs, additional parameters are:
+    <ul>
+        <li>combined (no value required)</li>
+        <li>format (only read when combined is set, possible values are n3, xml, json-ld)</li>
+    </ul>
+    <ul>
+        {% for url, endpoint in links %}
+            <li><a href="{{ url }}">{{ endpoint }}</a></li>
+        {% endfor %}
+    </ul>
+</div>
+<div>
+    Here is the entrance to CityPulse.
+    <ul>
+        <li>An example to CityPulse style annotation; the last section of the URL is stream ID: (<a
+                href="/citypulse/datapoints/HiqjRxrdSlaRyIAki4gQog">ns3</a>) (<a
+                href="/citypulse/datapoints/HiqjRxrdSlaRyIAki4gQog?format=xml">xml</a>) (<a
+                href="/citypulse/datapoints/HiqjRxrdSlaRyIAki4gQog?format=json-ld">json-ld</a>)
+        </li>
+    </ul>
+</div>

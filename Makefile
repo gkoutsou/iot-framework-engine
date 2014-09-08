@@ -29,6 +29,11 @@ conf: compile_libs
 
 get_libs:
 	@@$(REBAR) get-deps
+	wget "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.1.2.zip"
+	unzip elasticsearch-1.1.2.zip -d lib
+	rm elasticsearch-1.1.2.zip
+	cp -r es_config/* lib/elasticsearch-1.1.2/config/
+	-git apply --directory=lib/erlson --whitespace=fix erlsonPatch.txt
 
 compile_libs:
 	@$(REBAR) compile
@@ -85,10 +90,14 @@ test_setup: compile
 stop_all:
 	sudo scripts/sensec.sh stop
 
+### Command: make run_semantic_adapter
+run_semantic_adapter:
+	sudo python semantic-adapter/web_run.py
+
 ### Command: make run_es
 ### Runs elastic search
 run_es:
-	lib/elasticsearch/bin/elasticsearch -f
+	lib/elasticsearch-1.1.2/bin/elasticsearch
 
 ### Command: make run_nodejs
 ### Runs NodeJS

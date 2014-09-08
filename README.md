@@ -1,11 +1,10 @@
 # IoT-Framework Engine
 
-Welcome to the "Project CS 2013" project
+The IoT-Framework is a computational engine for the Internet of Things (IoT). It was developed jointly by Ericsson Research, the Swedish Institute of Computer Science (SICS) and Uppsala University in the scope of Project CS 2013. This repository contains the server side of the system, while [IoT-Framework-GUI](https://github.com/EricssonResearch/iot-framework-gui) contains the graphical user interface.
 
 ## Demo
 
-You can check out a demo of the IoT-Framework here: [IoT-Framework
-demo](https://vimeo.com/98966770). 
+You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https://vimeo.com/98966770).
 
 ## Installing the project
 
@@ -32,7 +31,7 @@ demo](https://vimeo.com/98966770).
         % don't forget to export R_HOME for example
         export R_HOME="/usr/lib/R"
         make run
-   
+
 4. To shutdown either close each individual shell or run one of the commands below
 
         make stop_all
@@ -41,10 +40,10 @@ demo](https://vimeo.com/98966770).
 ## Running tests
 
 1. There are two ways of setting up the environment for testing. Either run the startup script by one of the below commands.
-   
+
         make test_setup
         sudo ./scripts/sensec.sh test_setup
-        
+
 2. Or run each of the following commands in a separate shell
 
         make run_rabbit

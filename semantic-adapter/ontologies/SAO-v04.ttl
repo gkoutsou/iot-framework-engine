@@ -1,0 +1,342 @@
+@prefix : <http://www.semanticweb.org/owl/owlapi/turtle#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix om: <http://purl.oclc.org/NET/om/> .
+@prefix tl: <http://purl.org/NET/c4dm/timeline.owl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix sao: <http://purl.oclc.org/NET/sao/> .
+@prefix ssn: <http://purl.oclc.org/NET/ssnx/ssn/> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix prov: <http://purl.org/NET/provenance.owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix DUL: <http://www.loa.istc.cnr.it/ontologies/DUL.owl#> .
+@prefix qoi: <http:/example.com/QoSQoI.owl#> .
+@prefix muo:   <http://purl.oclc.org/NET/muo/ucum/> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@base <http://purl.oclc.org/NET/sao/> .
+
+<http://purl.oclc.org/NET/sao/> rdf:type owl:Ontology ;
+
+                                owl:versionIRI <http://purl.oclc.org/NET/sao/1.0.0> .
+
+
+#################################################################
+#
+#    Annotation properties
+#
+#################################################################
+
+
+
+###  http://purl.org/dc/terms/description
+
+dc:description rdf:type owl:AnnotationProperty .
+
+
+
+
+#################################################################
+#
+#    Object Properties
+#
+#################################################################
+
+
+###  http://purl.oclc.org/NET/sao/computeby
+
+sao:computeby rdf:type owl:ObjectProperty ;
+
+              rdfs:comment "relates a stream data to a computed result" ;
+
+              rdfs:range sao:StreamAnalysis ;
+
+              rdfs:domain sao:StreamData .
+
+
+
+###  http://purl.oclc.org/NET/sao/computedfrom
+
+sao:computedfrom rdf:type owl:ObjectProperty ;
+
+                 rdfs:comment "relates a computed result to a stream data" ;
+
+                 rdfs:domain sao:StreamAnalysis ;
+
+                 rdfs:range sao:StreamData .
+
+
+
+###  http://purl.oclc.org/NET/sao/time
+
+sao:time rdf:type owl:ObjectProperty ;
+
+         rdfs:comment "Relates a segment to the time interval concept in Timeline Ontology" ;
+
+         rdfs:range tl:Interval .
+
+
+
+###  http://purl.org/NET/provenance.owl#wasAssociatedWith
+
+prov:wasAssociatedWith rdf:type owl:ObjectProperty ;
+
+                       rdfs:comment "Relates a stream analysis to associated entity" ;
+
+		       rdfs:domain sao:StreamAnalysis ;
+
+                       rdfs:range DUL:InformationEntity .
+
+
+
+###  http://purl.org/NET/provenance.owl#wasDerivedFrom
+
+prov:wasDerivedFrom rdf:type owl:ObjectProperty ;
+
+                    rdfs:comment "Relates a stream data to an obervation" ;
+
+                    rdfs:range sao:StreamData .
+
+
+###  http://purl.oclc.org/NET/sao/hasQuantityUnitOfMeasurement
+
+sao:hasQuantityUnitOfMeasurement rdf:type owl:ObjectProperty ;
+
+                    rdfs:comment "Relates a stream data to a quantity unit of mesaurement" ;
+
+		    rdfs:domain sao:StreamData ;
+
+                    rdfs:range DUL:InformationEntity .
+
+
+###  http://purl.oclc.org/NET/sao/quality
+
+sao:quality rdf:type owl:ObjectProperty ;
+
+                    rdfs:comment "Relates a stream data to an information entity regarding the quality" ;
+
+		    rdfs:domain sao:StreamData ;
+
+                    rdfs:range DUL:InformationEntity .
+
+###  http://purl.oclc.org/NET/sao/hasUnitOfMeasurement
+
+sao:hasUnitOfMeasurement rdf:type owl:ObjectProperty ;
+
+              rdfs:comment "relates a stream data to a unit of measurement" ;
+
+              rdfs:range muo:UnitOfMeasurement ;
+
+              rdfs:domain sao:StreamData .
+
+
+###  http://purl.oclc.org/NET/sao/value
+
+sao:value rdf:type owl:ObjectProperty ;
+
+          rdfs:domain sao:StreamData ;
+
+	  rdfs:range owl:Thing .
+
+
+###  http://purl.oclc.org/NET/sao/hasLocation
+
+sao:hasLocation rdf:type owl:ObjectProperty ;
+
+                rdfs:range geo:SpatialThing .
+
+
+#################################################################
+#
+#    Data properties
+#
+#################################################################
+
+
+
+###  http://purl.oclc.org/NET/sao/alphabetsize
+
+sao:alphabetsize rdf:type owl:DatatypeProperty ;
+
+                 rdfs:comment "describes the alphabet size that have been used for a stream analysis technique (e.g. SymbolicAggregateApproximation)" ;
+
+                 rdfs:domain sao:SymbolicAggregateApproximation ;
+
+                 rdfs:range xsd:int .
+
+
+
+
+
+
+###  http://purl.oclc.org/NET/sao/hasURI
+
+sao:hasURI rdf:type owl:DatatypeProperty ;
+
+           rdfs:range xsd:string .
+
+
+
+###  http://purl.oclc.org/NET/sao/samplesize
+
+sao:samplesize rdf:type owl:DatatypeProperty ;
+
+               rdfs:comment "describes the number of samples that a stream data involve; or used for a stream analysis technique" ;
+
+               rdfs:domain sao:StreamData ;
+
+               rdfs:range xsd:int .
+
+
+
+###  http://purl.oclc.org/NET/sao/samplingrate
+
+sao:samplingrate rdf:type owl:DatatypeProperty ;
+
+                 rdfs:domain sao:StreamData ;
+
+                 rdfs:range xsd:int .
+
+
+
+###  http://purl.oclc.org/NET/sao/segmentsize
+
+sao:segmentsize rdf:type owl:DatatypeProperty ;
+
+         	rdfs:comment "Describes the number of segments that have been used for a stream data/analysis" ;
+
+                rdfs:domain sao:StreamAnalysis ;
+
+                rdfs:range xsd:int .
+
+
+
+###  http://purl.oclc.org/NET/sao/stepsize
+
+sao:stepsize rdf:type owl:DatatypeProperty ;
+
+             rdfs:comment "Describes the step size in other words the size of overlapping frames that have been used for a stream data/analysis" ;
+
+             rdfs:domain sao:StreamAnalysis ;
+
+             rdfs:range xsd:int .
+
+
+
+###  http://purl.oclc.org/NET/sao/hasDataValue
+
+sao:hasDataValue rdf:type owl:DataTypeProperty;
+    	rdfs:range xsd:any.
+
+
+
+
+
+#################################################################
+#
+#    Classes
+#
+#################################################################
+
+
+
+
+
+###  http://purl.oclc.org/NET/sao/DiscreteCosineTransform
+
+sao:DiscreteCosineTransform rdf:type owl:Class ;
+
+                            rdfs:subClassOf sao:StreamAnalysis .
+
+
+
+###  http://purl.oclc.org/NET/sao/DiscreteFourierTransform
+
+sao:DiscreteFourierTransform rdf:type owl:Class ;
+
+                             rdfs:subClassOf sao:StreamAnalysis .
+
+
+
+###  http://purl.oclc.org/NET/sao/Mean
+
+sao:Mean rdf:type owl:Class ;
+
+         rdfs:subClassOf sao:StreamAnalysis ;
+
+         dc:description "Mean calculate the mean of each row of observations" .
+
+
+
+###  http://purl.oclc.org/NET/sao/Median
+
+sao:Median rdf:type owl:Class ;
+
+           rdfs:subClassOf sao:StreamAnalysis ;
+
+           dc:description "Median calculate the median of each row of observations" .
+
+
+
+###  http://purl.oclc.org/NET/sao/PiecewiseAggregateApproximation
+
+sao:PiecewiseAggregateApproximation rdf:type owl:Class ;
+
+                                    rdfs:subClassOf sao:StreamAnalysis .
+
+
+
+###  http://purl.oclc.org/NET/sao/Point
+
+sao:Point rdf:type owl:Class ;
+
+          rdfs:subClassOf sao:StreamData .
+
+
+
+###  http://purl.oclc.org/NET/sao/StreamAnalysis
+
+sao:StreamAnalysis rdf:type owl:Class  ;
+
+          rdfs:subClassOf sao:StreamData .
+
+
+
+###  http://purl.oclc.org/NET/sao/StreamData
+
+sao:StreamData rdf:type owl:Class  ;
+
+          rdfs:subClassOf sao:StreamAnalysis, ssn:Observation ;
+
+          rdfs:subClassOf prov:Entity ;
+
+	  rdfs:subClassOf [ a owl:Restriction ;
+                                 owl:allValuesFrom DUL:InformationEntity ;
+                                 owl:onProperty sao:quality
+                               ] .
+
+
+
+
+###  http://purl.oclc.org/NET/sao/StreamEvent
+
+sao:StreamEvent rdf:type owl:Class  ;
+
+          rdfs:subClassOf prov:Activity .
+
+
+
+###  http://purl.oclc.org/NET/sao/StreamSegment
+
+sao:Segment rdf:type owl:Class ;
+
+                  rdfs:subClassOf sao:StreamData .
+
+
+
+###  http://purl.oclc.org/NET/sao/SymbolicAggregateApproximation
+
+sao:SymbolicAggregateApproximation rdf:type owl:Class ;
+
+                                   rdfs:subClassOf sao:StreamAnalysis .
