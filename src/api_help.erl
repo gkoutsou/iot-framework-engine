@@ -309,14 +309,14 @@ get_list_and_add_password(JsonStruct) ->
     lib_json:set_attr(users, AddedPassword).
 
 %% @doc
-%% Function: get_info_request/1
+%% Function: uest/1
 %% Purpose: Retrieves the id from the path.
 %% Returns: Id
 %% @end
 -spec get_info_request(ReqData::tuple()) -> string().
 get_info_request(ReqData) ->
     Fetch_username = fun(TableName, Id) ->
-    		erlang:display({"get_info_request", TableName, Id}),
+    		% erlang:display({"get_info_request", TableName, Id}),
         case erlastic_search:get_doc(?INDEX, TableName, Id) of
             {error, _} -> {undefined, undefined};
             {ok, JSON} ->

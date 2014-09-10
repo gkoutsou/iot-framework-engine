@@ -245,7 +245,7 @@ store_own_token(TokenJSON) ->
 auth_request(ReqData) ->
     case authenticate("Access-Token", ReqData) of
         {error, Error} -> {error, ?STATUS_AUTHENTICATION_FAIL, "{\"error\": \"" ++ Error ++ "\"}"};
-        {ok, TokenOwner}   -> authorize(ReqData, TokenOwner)
+        {ok, TokenOwner}   -> authorize(ReqData, binary_to_list(TokenOwner))
     end.
 
 
@@ -262,7 +262,6 @@ authenticate(TokenName, ReqData) ->
 -spec authorize(ReqData::tuple(), TokenOwner::string()) -> tuple().
 authorize(ReqData, TokenOwner) ->
     {Method, Resource, UserRequested, Private} = api_help:get_info_request(ReqData),
-    erlang:display({Method, Resource, UserRequested, Private}),
     ValidAccess = case UserRequested of
         undefined -> authorization_rules_collection(Method, Resource);
         _         -> authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private)
@@ -277,7 +276,8 @@ authorize(ReqData, TokenOwner) ->
 -spec authorization_rules_individual(Method::atom(), Resource::string(),
     UserRequested::string(), TokenOwner::string(), Private::boolean()) -> boolean().
 authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private) ->
-    case {UserRequested == TokenOwner, Private} of
+    erlang:display({Method, Resource, UserRequested, TokenOwner, Private}),
+    Res = case {UserRequested == TokenOwner, Private} of
         {true, _}      -> true;                   % Exception 1: Can MAKE anything with his/her own data
 
         {false, true}  -> false;                  % Exception 2: Can NOT MAKE anything to private resources
@@ -291,8 +291,12 @@ authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Priv
                 {'PUT', "rank"} -> true;          % Exception 4: Can ONLY PUT other's ranking of a stream
 
                 _ -> false                        % Rule: Anything else is forbidden
-            end
-    end.
+            end;
+
+        _ -> false                                %       Anything else is forbidden
+    end,
+    erlang:display({"Granted access?", Res}),
+    Res.
 
 
 -spec authorization_rules_collection(Method::atom(), Resource::string()) -> boolean().
@@ -303,6 +307,7 @@ authorization_rules_collection(Method, Resource) ->
 
     POSTResources = ((Resource == "users") or (Resource == "streams") or (Resource == "vstreams")),
     ValidPOST = ((Method == 'POST') and POSTResources),
+    erlang:display({"Granted access?", ValidGET or ValidPOST}),
     ValidGET or ValidPOST.
 
 
