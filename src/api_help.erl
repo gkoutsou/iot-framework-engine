@@ -295,7 +295,11 @@ get_list_and_add_id(JsonStruct, JsonKey) ->
 get_and_add_password(JsonStruct) ->
     Id  = lib_json:get_field(JsonStruct, "fields.password"),
     SourceJson  = lib_json:get_field(JsonStruct, "_source"),
-    lib_json:add_value(SourceJson, "password", Id).
+    Pass = case Id == undefined of
+    	true -> Id;
+    	false -> lists:last(Id)
+    end,
+    lib_json:add_value(SourceJson, "password", Pass).
 
 %% @doc
 %% Get the search results and performs get_and_add_password/1 on each
