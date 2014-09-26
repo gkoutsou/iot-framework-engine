@@ -8,7 +8,7 @@ set -e
 echo "#################################################################"
 echo "Installing misc dependencies"
 echo "#################################################################"
-sudo apt-get install -yq xsltproc software-properties-commom python-pip libpython-dev
+sudo apt-get install -yq xsltproc software-properties-common python-pip libpython-dev
 
 echo "#################################################################"
 echo "Installing openjdk-7"
