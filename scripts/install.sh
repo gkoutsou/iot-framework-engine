@@ -8,7 +8,8 @@ set -e
 echo "#################################################################"
 echo "Installing misc dependencies"
 echo "#################################################################"
-sudo apt-get install -yq xsltproc software-properties-commom python-pip libpython-dev
+#sudo apt-get install -yq xsltproc software-properties-commom python-pip libpython-dev
+sudo apt-get install -yq xsltproc python-pip libpython-dev
 
 echo "#################################################################"
 echo "Installing openjdk-7"
@@ -41,3 +42,21 @@ echo "#################################################################"
 echo "Installing pip"
 echo "#################################################################"
 sudo pip install -r semantic-adapter/pip-freeze.txt
+
+echo "#################################################################"
+echo "Installing boot scripts"
+echo "#################################################################"
+sudo cp $PWD/scripts/boot/iotf-es /etc/init.d
+if [ $? -ne 0 ]; then
+    #sudo cp $PWD/scripts/boot/iotf-es /etc/init.d
+    echo "Call the script from the project folder"
+else
+    echo "iotf-es... Success!"
+fi
+
+sudo cp $PWD/scripts/boot/iotf-rmq /etc/init.d
+if [ $? -ne 0 ]; then
+    echo "Call the script from the project folder"
+else
+    echo "iotf-rmq... Success!"
+fi
