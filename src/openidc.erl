@@ -30,7 +30,7 @@
 -define(APIKEY, "AIzaSyCyC23vutanlgth_1INqQdZsv6AgZRiknY").
 -define(CLIENT_ID, "995342763478-fh8bd2u58n1tl98nmec5jrd76dkbeksq.apps.googleusercontent.com").
 -define(CLIENT_SECRET, "fVpjWngIEny9VTf3ZPZr8Sh6").
--define(REDIRECT_URL, "http://localhost:8000/users/_openid").
+-define(REDIRECT_URL, "http://213.159.184.45:8000/users/_openid").
 
 -define(FRONTEND_ID, "107908217220817548513").
 -define(PUB_SUB_ID,  "<< add here ... >>").
@@ -276,26 +276,29 @@ authorize(ReqData, TokenOwner) ->
 -spec authorization_rules_individual(Method::atom(), Resource::string(),
     UserRequested::string(), TokenOwner::string(), Private::boolean()) -> boolean().
 authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private) ->
-    erlang:display({Method, Resource, UserRequested, TokenOwner, Private}),
+    erlang:display(UserRequested),
+    erlang:display(TokenOwner),
     Res = case {UserRequested == TokenOwner, Private} of
-        {true, _}      -> true;                   % Exception 1: Can MAKE anything with his/her own data
-
-        {false, true}  -> false;                  % Exception 2: Can NOT MAKE anything to private resources
+        {true, _}      -> %true;                   % Exception 1: Can MAKE anything with his/her own data
+               erlang:display("exp.1"), true;
+        {false, true}  -> %false;                  % Exception 2: Can NOT MAKE anything to private resources
+               erlang:display("exp.2"), false;
 
         {false, false} ->
             case {Method, Resource} of
-                {'GET',    "users"} -> true;      % Exception 3: Can ONLY GET public User/Streams/VS
-                {'GET',  "streams"} -> true;
-                {'GET', "vstreams"} -> true;
+                {'GET',    "users"} -> erlang:display("exp.3"), true;      % Exception 3: Can ONLY GET public User/Streams/VS
+                {'GET',  "streams"} -> erlang:display("exp.3"), true;
+                {'GET', "vstreams"} -> erlang:display("exp.3"), true;
 
-                {'PUT', "rank"} -> true;          % Exception 4: Can ONLY PUT other's ranking of a stream
+                {'PUT', "rank"} -> %true;          % Exception 4: Can ONLY PUT other's ranking of a stream
+                    erlang:display("exp.4"), true;
 
-                _ -> false                        % Rule: Anything else is forbidden
+                _ ->erlang:display("rule"), false                        % Rule: Anything else is forbidden
             end;
 
         _ -> false                                %       Anything else is forbidden
     end,
-    erlang:display({"Granted access?", Res}),
+    erlang:display({"Granted Access:", Res}),
     Res.
 
 
@@ -307,8 +310,10 @@ authorization_rules_collection(Method, Resource) ->
 
     POSTResources = ((Resource == "users") or (Resource == "streams") or (Resource == "vstreams")),
     ValidPOST = ((Method == 'POST') and POSTResources),
-    erlang:display({"Granted access?", ValidGET or ValidPOST}),
-    ValidGET or ValidPOST.
+    Res = ValidGET or ValidPOST,
+    erlang:display("Rule 5"),
+    erlang:display({"Granted Access:", Res}),
+    Res.
 
 
 -spec check_valid_token(TokenName::string(), TokenValue::string()) -> tuple().
