@@ -5,6 +5,17 @@
 #Break on error
 set -e
 
+
+install_boot_script() {  # $1 is the script
+   sudo cp $PWD/scripts/boot/$1 /etc/init.d
+   if [ $? -ne 0 ]; then
+      echo "Call the script from the project folder"
+   else
+      echo "iotf-rmq... Success!"
+      sudo update-rc.d $1 defaults
+   fi
+}
+
 echo "#################################################################"
 echo "Installing misc dependencies"
 echo "#################################################################"
@@ -46,17 +57,7 @@ sudo pip install -r semantic-adapter/pip-freeze.txt
 echo "#################################################################"
 echo "Installing boot scripts"
 echo "#################################################################"
-sudo cp $PWD/scripts/boot/iotf-es /etc/init.d
-if [ $? -ne 0 ]; then
-    #sudo cp $PWD/scripts/boot/iotf-es /etc/init.d
-    echo "Call the script from the project folder"
-else
-    echo "iotf-es... Success!"
-fi
+install_boot_script "iotf-backend"
+install_boot_script "iotf-es"
+install_boot_script "iotf-rmq"
 
-sudo cp $PWD/scripts/boot/iotf-rmq /etc/init.d
-if [ $? -ne 0 ]; then
-    echo "Call the script from the project folder"
-else
-    echo "iotf-rmq... Success!"
-fi

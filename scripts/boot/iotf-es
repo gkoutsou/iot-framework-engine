@@ -11,7 +11,7 @@
 
 dir="/home/ubuntu/iot-framework-engine"
 user="iotf-es"
-cmd="sudo make run_es"
+cmd="make run_es"
 
 name=`basename $0`
 pid_file="/var/run/$name.pid"

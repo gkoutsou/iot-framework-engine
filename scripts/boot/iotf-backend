@@ -10,8 +10,8 @@
 ### END INIT INFO
 
 dir="/home/ubuntu/iot-framework-engine"
-user="iotf-rmq"
-cmd="make run_rabbit"
+user="iotf-backend"
+cmd="make run"
 
 name=`basename $0`
 pid_file="/var/run/$name.pid"
