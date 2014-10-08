@@ -74,14 +74,14 @@ content_types_provided(ReqData, State) ->
 -spec process_post(ReqData::tuple(), State::string()) -> {true, tuple(), string()}.
 process_post(ReqData, State) ->
 	case openidc:auth_request(ReqData) of
-	  {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
-	  {ok, _} ->
+		{error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+		{ok, _} ->
 			case api_help:is_search(ReqData) of
 				false ->
 					DataType = case is_virtual(ReqData) of
-				  	true -> "vsdatapoint";
-				  	false -> "datapoint"
-			    end,
+						true -> "vsdatapoint";
+						false -> "datapoint"
+					end,
 					StreamType = case is_virtual(ReqData) of
 						true -> "vstream";
 						false -> "stream"
@@ -111,16 +111,16 @@ process_post(ReqData, State) ->
 													{{halt,403}, wrq:set_resp_body("Unsupported field(s)", ReqData), State};
 												true ->
 													case erlastic_search:get_doc(?INDEX, StreamType, Id) of
-												 		{error,{404,_}} ->
-													 		NoDocMsg = "{\"error\":\"no document with streamid given is present in the ystem\"}",
-													 		{{halt,409}, wrq:set_resp_body(NoDocMsg, ReqData), State};
+														{error,{404,_}} ->
+															NoDocMsg = "{\"error\":\"no document with streamid given is present in the ystem\"}",
+															{{halt,409}, wrq:set_resp_body(NoDocMsg, ReqData), State};
 
-								         		{error,{Code,Body}} ->
-								             		ErrorString = api_help:generate_error(Body, Code),
-								             		{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+														{error,{Code,Body}} ->
+																ErrorString = api_help:generate_error(Body, Code),
+																{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
 
-								        		{ok,_} ->
-													 		case erlastic_search:index_doc(?INDEX, DataType, FinalJson) of
+														{ok,_} ->
+															case erlastic_search:index_doc(?INDEX, DataType, FinalJson) of
 																{error, {Code, Body}} ->
 																	ErrorString = api_help:generate_error(Body, Code),
 																	{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
@@ -133,16 +133,17 @@ process_post(ReqData, State) ->
 																		ok ->
 																			Msg = list_to_binary(FinalJson),
 																			StreamExchange = list_to_binary(StreamType ++ "s." ++Id),
-					                   					%% Connect
-					                   					{ok, Connection} = amqp_connection:start(#amqp_params_network{host = "localhost"}),
-					                    				%% Open channel
-					                    				{ok, Channel} = amqp_connection:open_channel(Connection),
-					                    				%% Declare exchange
-					                    				amqp_channel:call(Channel, #'exchange.declare'{exchange = StreamExchange, type = <<"fanout">>}),
-					                    				%% Send
-					                   					amqp_channel:cast(Channel, #'basic.publish'{exchange = StreamExchange}, #amqp_msg{payload = Msg}),
-					                   					ok = amqp_channel:close(Channel),
-													       			ok = amqp_connection:close(Connection),
+																			%% Connect
+																			% {ok, Connection} = amqp_connection:start(#amqp_params_network{host = "localhost"}),
+																			{ok, Connection} = singleton:get(),
+																			%% Open channel
+																			{ok, Channel} = amqp_connection:open_channel(Connection),
+																			%% Declare exchange
+																			amqp_channel:call(Channel, #'exchange.declare'{exchange = StreamExchange, type = <<"fanout">>}),
+																			%% Send
+																			amqp_channel:cast(Channel, #'basic.publish'{exchange = StreamExchange}, #amqp_msg{payload = Msg}),
+																			ok = amqp_channel:close(Channel),
+																			% ok = amqp_connection:close(Connection),
 																			{true, wrq:set_resp_body(lib_json:encode(List), ReqData), State}
 																	end
 															end
@@ -217,23 +218,23 @@ process_post(ReqData, State) ->
 -spec get_datapoint(ReqData::tuple(), State::string()) -> {list(), tuple(), string()}.
 get_datapoint(ReqData, State) ->
 	case openidc:auth_request(ReqData) of
-        {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
-        {ok, _} ->
+				{error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+				{ok, _} ->
 			DataType = case is_virtual(ReqData) of
-						   true -> "vsdatapoint";
-						   false -> "datapoint"
-					   end,
-		    case wrq:get_qs_value("size",ReqData) of
-		        undefined ->
+							 true -> "vsdatapoint";
+							 false -> "datapoint"
+						 end,
+				case wrq:get_qs_value("size",ReqData) of
+						undefined ->
 					case erlastic_search:count_type(?INDEX, "datapoint") of
 						{error, {_CountCode, _CountBody}} ->
 							Size = 100;
 						{ok,CountJsonStruct} ->
 							Size = lib_json:get_field(CountJsonStruct,"count")
 					end;
-		        SizeParam ->
-		            Size = list_to_integer(SizeParam)
-		    end,
+						SizeParam ->
+								Size = list_to_integer(SizeParam)
+				end,
 			case api_help:is_search(ReqData) of
 				false ->
 					case api_help:is_count(ReqData) of
@@ -289,50 +290,50 @@ get_datapoint(ReqData, State) ->
 		{list(), tuple(), string()}.
 process_search(ReqData, State, post) ->
 	DataType = case is_virtual(ReqData) of
-				   true -> "vsdatapoint";
-				   false -> "datapoint"
-			   end,
+					 true -> "vsdatapoint";
+					 false -> "datapoint"
+				 end,
 	{Json,_,_} = api_help:json_handler(ReqData,State),
 	case erlastic_search:search_json(#erls_params{},?INDEX, DataType, Json) of
 			{error, {Code, Body}} ->
 				ErrorString = api_help:generate_error(Body, Code),
 				{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
 			{ok,JsonStruct} ->
-					       FinalJson = api_help:get_list_and_add_id(JsonStruct),
-					       {true,wrq:set_resp_body(lib_json:encode(FinalJson),ReqData),State}
+								 FinalJson = api_help:get_list_and_add_id(JsonStruct),
+								 {true,wrq:set_resp_body(lib_json:encode(FinalJson),ReqData),State}
 	end;
 process_search(ReqData, State, get) ->
 	DataType = case is_virtual(ReqData) of
-				   true -> "vsdatapoint";
-				   false -> "datapoint"
-			   end,
+					 true -> "vsdatapoint";
+					 false -> "datapoint"
+				 end,
 	TempQuery = wrq:req_qs(ReqData),
 	Id = id_from_path(ReqData),
-    case wrq:get_qs_value("size",ReqData) of
-	    undefined ->
-	        Size = 100;
-	    SizeParam ->
-	        Size = list_to_integer(SizeParam)
-    end,
+		case wrq:get_qs_value("size",ReqData) of
+			undefined ->
+					Size = 100;
+			SizeParam ->
+					Size = list_to_integer(SizeParam)
+		end,
 	case TempQuery of
 		[] ->
 			case erlastic_search:search_limit(?INDEX, DataType,"stream_id:" ++ Id ++ "&sort=timestamp:desc", Size) of
 				{error, {Code, Body}} ->
-    				ErrorString = api_help:generate_error(Body, Code),
-    				{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
-            	{ok,JsonStruct} ->
-			       FinalJson = api_help:get_list_and_add_id(JsonStruct, data),
-			       {FinalJson, ReqData, State}
-		 	end;
+						ErrorString = api_help:generate_error(Body, Code),
+						{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+							{ok,JsonStruct} ->
+						 FinalJson = api_help:get_list_and_add_id(JsonStruct, data),
+						 {FinalJson, ReqData, State}
+			end;
 		_ ->
 			TransformedQuery="stream_id:" ++ Id ++ transform(TempQuery) ++ "&sort=timestamp:desc",
 			case erlastic_search:search_limit(?INDEX, DataType,TransformedQuery, Size) of
 				{error, {Code, Body}} ->
-    				ErrorString = api_help:generate_error(Body, Code),
-    				{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
-            	{ok,JsonStruct} ->
-			       FinalJson = api_help:get_list_and_add_id(JsonStruct, data),
-			       {FinalJson, ReqData, State}
+						ErrorString = api_help:generate_error(Body, Code),
+						{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+							{ok,JsonStruct} ->
+						 FinalJson = api_help:get_list_and_add_id(JsonStruct, data),
+						 {FinalJson, ReqData, State}
 			end
 	end.
 
@@ -397,9 +398,9 @@ is_virtual(ReqData) ->
 
 update_fields_in_stream(StreamId,TimeStamp,ReqData,State) ->
 	StreamType = case is_virtual(ReqData) of
-				   true -> "vstream";
-				   false -> "stream"
-			   end,
+					 true -> "vstream";
+					 false -> "stream"
+				 end,
 	case update_fields_in_stream({StreamType, StreamId}, TimeStamp) of
 		{error, Code, ErrorString}->
 			{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
@@ -422,14 +423,14 @@ update_fields_in_stream({StreamType, StreamId}, TimeStamp) ->
 	case erlastic_search:get_doc(?INDEX, StreamType, StreamId) of
 		{error, {Code, Body}} ->
 			ErrorString = api_help:generate_error(Body, Code),
-            {error, Code, ErrorString};
+						{error, Code, ErrorString};
 		{ok,StreamJson} ->
 			Time = case is_list(TimeStamp) of
-					   true->
-						   list_to_binary(TimeStamp);
-					   _->
-						   TimeStamp
-				   end,
+						 true->
+							 list_to_binary(TimeStamp);
+						 _->
+							 TimeStamp
+					 end,
 
 			Json = lib_json:set_attrs([{"last_updated", Time}]),
 			Update = lib_json:set_attr(doc, Json),

@@ -245,7 +245,7 @@ store_own_token(TokenJSON) ->
 auth_request(ReqData) ->
     case authenticate("Access-Token", ReqData) of
         {error, Error} -> {error, ?STATUS_AUTHENTICATION_FAIL, "{\"error\": \"" ++ Error ++ "\"}"};
-        {ok, TokenOwner}   -> authorize(ReqData, binary_to_list(TokenOwner))
+        {ok, TokenOwner}   -> authorize(ReqData, TokenOwner)
     end.
 
 
@@ -349,7 +349,7 @@ verify_own_token(AccToken) ->
     case look_up_token(AccToken) of
         {error, Error} -> {error, Error};
         {ok, JSON} ->
-            UserID = lib_json:get_field(JSON, "_source.user_id"),
+            UserID = binary_to_list(lib_json:get_field(JSON, "_source.user_id")),
 
             CurrentTS = api_help:now_to_seconds(),
             IssuedAt  = lib_json:get_field(JSON, "_source.issued_at"),
