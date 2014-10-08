@@ -12,6 +12,7 @@ install_boot_script() {  # $1 is the script
       echo "Call the script from the project folder"
    else
       echo "iotf-rmq... Success!"
+      sudo chmod +x /etc/init.d/$1
       sudo update-rc.d $1 defaults
    fi
 }
