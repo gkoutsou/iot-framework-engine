@@ -30,7 +30,7 @@
 -define(APIKEY, "AIzaSyCyC23vutanlgth_1INqQdZsv6AgZRiknY").
 -define(CLIENT_ID, "995342763478-fh8bd2u58n1tl98nmec5jrd76dkbeksq.apps.googleusercontent.com").
 -define(CLIENT_SECRET, "fVpjWngIEny9VTf3ZPZr8Sh6").
--define(REDIRECT_URL, "http://localhost:8000/users/_openid").
+-define(REDIRECT_URL, "http://213.159.184.45:8000/users/_openid").
 
 -define(FRONTEND_ID, "107908217220817548513").
 -define(PUB_SUB_ID,  "<< add here ... >>").
@@ -262,7 +262,6 @@ authenticate(TokenName, ReqData) ->
 -spec authorize(ReqData::tuple(), TokenOwner::string()) -> tuple().
 authorize(ReqData, TokenOwner) ->
     {Method, Resource, UserRequested, Private} = api_help:get_info_request(ReqData),
-    erlang:display({Method, Resource, UserRequested, Private}),
     ValidAccess = case UserRequested of
         undefined -> authorization_rules_collection(Method, Resource);
         _         -> authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private)
@@ -277,22 +276,30 @@ authorize(ReqData, TokenOwner) ->
 -spec authorization_rules_individual(Method::atom(), Resource::string(),
     UserRequested::string(), TokenOwner::string(), Private::boolean()) -> boolean().
 authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private) ->
-    case {UserRequested == TokenOwner, Private} of
-        {true, _}      -> true;                   % Exception 1: Can MAKE anything with his/her own data
-
-        {false, true}  -> false;                  % Exception 2: Can NOT MAKE anything to private resources
+    erlang:display(UserRequested),
+    erlang:display(TokenOwner),
+    Res = case {UserRequested == TokenOwner, Private} of
+        {true, _}      -> %true;                   % Exception 1: Can MAKE anything with his/her own data
+               erlang:display("exp.1"), true;
+        {false, true}  -> %false;                  % Exception 2: Can NOT MAKE anything to private resources
+               erlang:display("exp.2"), false;
 
         {false, false} ->
             case {Method, Resource} of
-                {'GET',    "users"} -> true;      % Exception 3: Can ONLY GET public User/Streams/VS
-                {'GET',  "streams"} -> true;
-                {'GET', "vstreams"} -> true;
+                {'GET',    "users"} -> erlang:display("exp.3"), true;      % Exception 3: Can ONLY GET public User/Streams/VS
+                {'GET',  "streams"} -> erlang:display("exp.3"), true;
+                {'GET', "vstreams"} -> erlang:display("exp.3"), true;
 
-                {'PUT', "rank"} -> true;          % Exception 4: Can ONLY PUT other's ranking of a stream
+                {'PUT', "rank"} -> %true;          % Exception 4: Can ONLY PUT other's ranking of a stream
+                    erlang:display("exp.4"), true;
 
-                _ -> false                        % Rule: Anything else is forbidden
-            end
-    end.
+                _ ->erlang:display("rule"), false                        % Rule: Anything else is forbidden
+            end;
+
+        _ -> false                                %       Anything else is forbidden
+    end,
+    erlang:display({"Granted Access:", Res}),
+    Res.
 
 
 -spec authorization_rules_collection(Method::atom(), Resource::string()) -> boolean().
@@ -303,7 +310,10 @@ authorization_rules_collection(Method, Resource) ->
 
     POSTResources = ((Resource == "users") or (Resource == "streams") or (Resource == "vstreams")),
     ValidPOST = ((Method == 'POST') and POSTResources),
-    ValidGET or ValidPOST.
+    Res = ValidGET or ValidPOST,
+    erlang:display("Rule 5"),
+    erlang:display({"Granted Access:", Res}),
+    Res.
 
 
 -spec check_valid_token(TokenName::string(), TokenValue::string()) -> tuple().
@@ -339,7 +349,7 @@ verify_own_token(AccToken) ->
     case look_up_token(AccToken) of
         {error, Error} -> {error, Error};
         {ok, JSON} ->
-            UserID = lib_json:get_field(JSON, "_source.user_id"),
+            UserID = binary_to_list(lib_json:get_field(JSON, "_source.user_id")),
 
             CurrentTS = api_help:now_to_seconds(),
             IssuedAt  = lib_json:get_field(JSON, "_source.issued_at"),

@@ -614,12 +614,13 @@ get_user_model(ReqData, State) ->
                 SizeParam ->
                     Size = list_to_integer(SizeParam)
             end,
-            case wrq:get_qs_value("admin",ReqData) of
-                "true" ->
-                    Query = "{\"size\" :" ++ integer_to_list(Size) ++",\"query\" : {\"match_all\" : {}},\"fields\":[\"password\",\"_source\"]}}";
-                _ ->
-                    Query = "{\"size\" :" ++ integer_to_list(Size) ++",\"query\" : {\"match_all\" : {}},\"filter\" : {\"bool\":{\"must_not\":{\"term\":{\"private\":\"true\"}}}}}"
-            end,
+            % case wrq:get_qs_value("admin",ReqData) of
+            %     "true" ->
+            %         Query = "{\"size\" :" ++ integer_to_list(Size) ++",\"query\" : {\"match_all\" : {}},\"fields\":[\"password\",\"_source\"]}}";
+            %     _ ->
+            %         Query = "{\"size\" :" ++ integer_to_list(Size) ++",\"query\" : {\"match_all\" : {}},\"filter\" : {\"bool\":{\"must_not\":{\"term\":{\"private\":\"true\"}}}}}"
+            % end,
+            Query = "{\"size\" :" ++ integer_to_list(Size) ++",\"query\" : {\"match_all\" : {}},\"fields\":[\"password\",\"_source\"]}}",
             case erlastic_search:search_json(#erls_params{},?INDEX, "user", Query) of
                 {error, {Code, Body}} ->
                     ErrorString = api_help:generate_error(Body, Code),
@@ -673,7 +674,11 @@ process_search(ReqData, State, get) ->
 %% @end
 -spec add_server_side_fields(Json::string()) -> string().
 add_server_side_fields(Json) ->
-    lib_json:add_values(Json,[{rankings, "[]"},{notifications,"[]"},{triggers,"[]"},{subscriptions, "[]"}]).
+    Private = case lib_json:get_field(Json, "private") of
+        undefined -> false;
+        Priv -> Priv
+    end,
+    lib_json:add_values(Json,[{rankings, "[]"},{notifications,"[]"},{triggers,"[]"},{subscriptions, "[]"},{private, Private}]).
 
 
 -spec create_access_token(Username::string(), UserJSON::tuple()) -> string().

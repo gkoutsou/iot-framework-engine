@@ -295,7 +295,11 @@ get_list_and_add_id(JsonStruct, JsonKey) ->
 get_and_add_password(JsonStruct) ->
     Id  = lib_json:get_field(JsonStruct, "fields.password"),
     SourceJson  = lib_json:get_field(JsonStruct, "_source"),
-    lib_json:add_value(SourceJson, "password", Id).
+    Pass = case Id == undefined of
+    	true -> Id;
+    	false -> lists:last(Id)
+    end,
+    lib_json:add_value(SourceJson, "password", Pass).
 
 %% @doc
 %% Get the search results and performs get_and_add_password/1 on each
@@ -309,14 +313,14 @@ get_list_and_add_password(JsonStruct) ->
     lib_json:set_attr(users, AddedPassword).
 
 %% @doc
-%% Function: get_info_request/1
+%% Function: uest/1
 %% Purpose: Retrieves the id from the path.
 %% Returns: Id
 %% @end
 -spec get_info_request(ReqData::tuple()) -> string().
 get_info_request(ReqData) ->
     Fetch_username = fun(TableName, Id) ->
-    		erlang:display({"get_info_request", TableName, Id}),
+    		% erlang:display({"get_info_request", TableName, Id}),
         case erlastic_search:get_doc(?INDEX, TableName, Id) of
             {error, _} -> {undefined, undefined};
             {ok, JSON} ->
