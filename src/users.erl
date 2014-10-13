@@ -678,8 +678,7 @@ add_server_side_fields(Json) ->
         undefined -> false;
         Priv -> Priv
     end,
-    lib_json:add_values(Json,[{rankings, "[]"},{notifications,"[]"},{triggers,"[]"},
-        {subscriptions, "[]"},{private, Private}],{requests_day, 0}).
+    lib_json:add_values(Json,[{rankings, "[]"},{notifications,"[]"},{triggers,"[]"},{subscriptions, "[]"},{private, Private}]).
 
 
 -spec create_access_token(Username::string(), UserJSON::tuple()) -> string().

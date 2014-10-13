@@ -331,15 +331,14 @@ get_info_request(ReqData) ->
 
                 UserID  = string:to_lower(binary_to_list(UID)),
                 Private = lib_json:get_field(JSON, "_source.private"),
-                ReqsDay = lib_json:get_field(JSON, "_source.requests_day"),
 
-                {UserID, Private, ReqsDay}
+                {UserID, Private}
         end
     end,
 
 	Method = wrq:method(ReqData),
 
-    {Resource, {UserRequested, Private, ReqsDay}} = case api_help:parse_path(wrq:path(ReqData)) of
+    {Resource, {UserRequested, Private}} = case api_help:parse_path(wrq:path(ReqData)) of
         [{"users"}]                               -> {     "users", {undefined, false}};
         [{"users", Id}]                           -> {     "users", Fetch_username("user", Id)};
         [{"users", Id}, {Res, Sid}]               -> {         Res, Fetch_username(Res, Sid)};
@@ -365,7 +364,7 @@ get_info_request(ReqData) ->
         _                                         -> {   undefined, undefined}
     end,
 
-    {Method, Resource, UserRequested, Private, ReqsDay}.
+    {Method, Resource, UserRequested, Private}.
 
 
 

@@ -30,7 +30,7 @@
 -define(APIKEY, "AIzaSyCyC23vutanlgth_1INqQdZsv6AgZRiknY").
 -define(CLIENT_ID, "995342763478-fh8bd2u58n1tl98nmec5jrd76dkbeksq.apps.googleusercontent.com").
 -define(CLIENT_SECRET, "fVpjWngIEny9VTf3ZPZr8Sh6").
--define(REDIRECT_URL, "http://213.159.184.45:8000/users/_openid").
+-define(REDIRECT_URL, "http://localhost:8000/users/_openid").
 
 -define(FRONTEND_ID, "107908217220817548513").
 -define(PUB_SUB_ID,  "<< add here ... >>").
@@ -38,6 +38,7 @@
 
 -define(STATUS_AUTHENTICATION_FAIL, 498).
 -define(STATUS_AUTHORISATION_FAIL, 401).
+-define(STATUS_TOO_MANY_REQUESTS, 429).
 
 -define(REQUESTS_DAY_LIMIT, 5).
 
@@ -263,62 +264,104 @@ authenticate(TokenName, ReqData) ->
 
 -spec authorize(ReqData::tuple(), TokenOwner::string()) -> tuple().
 authorize(ReqData, TokenOwner) ->
-    {Method, Resource, UserRequested, Private, ReqsDay} = api_help:get_info_request(ReqData),
+    {Method, Resource, UserRequested, Private} = api_help:get_info_request(ReqData),
 
-    ValidAccess = case UserRequested of
-        undefined -> authorization_rules_collection(Method, Resource);
-        _         -> authorization_rules_individual(Method, Resource, UserRequested, Private, ReqsDay, TokenOwner)
-    end,
+    case is_admin(TokenOwner) of
+        true -> {ok, TokenOwner};
+        false ->
+            ValidAccess = case UserRequested of
+                undefined -> authorization_rules_collection(Method, Resource);
+                _         -> authorization_rules_individual(Method, Resource, UserRequested, Private, TokenOwner)
+            end,
 
-    case is_admin(TokenOwner) or ValidAccess of
-        true  -> {ok, TokenOwner};
-        false -> {error, ?STATUS_AUTHORISATION_FAIL, "{\"error\": \"User not authorized. Permission denied\"}"}
+            case ValidAccess of
+                false ->
+                    Error1 = "{\"error\": \"User not authorized. Permission denied\"}",
+                    {error, ?STATUS_AUTHORISATION_FAIL, Error1};
+
+                true  ->
+                    case check_requests_day(TokenOwner) of
+                        false ->
+                            Error2 = "{\"error\": \"User has reached the maximum limit of requests/day. Permission denied\"}",
+                            {error, ?STATUS_TOO_MANY_REQUESTS, Error2};
+                        true -> {ok, TokenOwner}
+                    end
+            end
+    end.
+
+
+-spec check_requests_day(Username::string()) -> boolean().
+check_requests_day(Username) ->
+    TableName = "requests",
+    UserID = list_to_binary(Username),
+
+    case erlastic_search:get_doc(?INDEX, TableName, UserID) of
+        {error, _} -> % Insert a new record
+            JSON = lib_json:set_attrs([
+                {user_id, UserID},
+                {number, 0}
+            ]),
+            erlang:display(JSON),
+            erlastic_search:index_doc_with_id(?INDEX, TableName, UserID, JSON),
+            true;
+
+        {ok, Doc} -> % Check if current number is over limit
+            JSON   = lib_json:get_field(Doc, "_source"),
+            Number = lib_json:get_field(JSON, "number"),
+
+            erlang:display({Number, ?REQUESTS_DAY_LIMIT, Number >= ?REQUESTS_DAY_LIMIT}),
+            case Number >= ?REQUESTS_DAY_LIMIT of
+                true  -> false;
+                false ->
+                    JSON2 = lib_json:replace_field(JSON, "number", Number+1),
+                    Update = lib_json:set_attr(doc, JSON2),
+                    erlang:display(Update),
+                    api_help:update_doc(?INDEX, TableName, UserID, Update),
+                    true
+            end
     end.
 
 
 -spec authorization_rules_individual(Method::atom(), Resource::string(),
-    UserRequested::string(), Private::boolean(), ReqsDay::integer(), TokenOwner::string()) -> boolean().
-authorization_rules_individual(Method, Resource, UserRequested, Private, ReqsDay, TokenOwner) ->
+    UserRequested::string(), Private::boolean(), TokenOwner::string()) -> boolean().
+authorization_rules_individual(Method, Resource, UserRequested, Private, TokenOwner) ->
     erlang:display(UserRequested),
     erlang:display(TokenOwner),
-    Res = case ReqsDay >= ?REQUESTS_DAY_LIMIT of
-        true  -> false;                                    % Exception 0: A user CAN NOT MAKE more requests than the limit
-        false ->
-            case {UserRequested == TokenOwner, Private} of
-                {true, _}      -> %true;                   % Exception 1: Can MAKE anything with his/her own data
-                       erlang:display("exp.1"), true;
-                {false, true}  -> %false;                  % Exception 2: Can NOT MAKE anything to private resources
-                       erlang:display("exp.2"), false;
 
-                {false, false} ->
-                    case {Method, Resource} of
-                        {'GET',    "users"} -> erlang:display("exp.3"), true;      % Exception 3: Can ONLY GET public User/Streams/VS
-                        {'GET',  "streams"} -> erlang:display("exp.3"), true;
-                        {'GET', "vstreams"} -> erlang:display("exp.3"), true;
+    Res = case {UserRequested == TokenOwner, Private} of
+        {true, _}      -> %true;                   % Exception 1: Can MAKE anything with his/her own data
+               erlang:display("exp.1"), true;
+        {false, true}  -> %false;                  % Exception 2: Can NOT MAKE anything to private resources
+               erlang:display("exp.2"), false;
 
-                        {'PUT', "rank"} -> %true;          % Exception 4: Can ONLY PUT other's ranking of a stream
-                            erlang:display("exp.4"), true;
+        {false, false} ->
+            case {Method, Resource} of
+                {'GET',    "users"} -> erlang:display("exp.3"), true;      % Exception 3: Can ONLY GET public User/Streams/VS
+                {'GET',  "streams"} -> erlang:display("exp.3"), true;
+                {'GET', "vstreams"} -> erlang:display("exp.3"), true;
 
-                        _ ->erlang:display("rule"), false                        % Rule: Anything else is forbidden
-                    end;
+                {'PUT', "rank"} -> %true;          % Exception 4: Can ONLY PUT other's ranking of a stream
+                    erlang:display("exp.4"), true;
 
-                _ -> false                                %       Anything else is forbidden
-            end,
-    end
+                _ ->erlang:display("rule"), false                        % Rule: Anything else is forbidden
+            end;
+
+        _ -> false                                %       Anything else is forbidden
+    end,
+
     erlang:display({"Granted Access:", Res}),
-    update_user_requests_field(UserRequested, ReqsDay + 1),
     Res.
 
--spec update_user_requests_field(UserID::string(), NewReqsDay::integer()) -> tuple() || atom().
-update_user_requests_field(UserID, NewReqsDay) ->
-    JSON = lib_json:set_attrs([{"requests_day", NewReqsDay}]),
-    Update = lib_json:set_attr(doc, JSON),
-    case erlastic_search:update_doc(?INDEX, "user", UserID, Update) of
-        {error, {Code, Body}} ->
-            ErrorString = api_help:generate_error(Body, Code),
-            {error, Code, ErrorString};
-        {ok, _} -> ok
-    end.
+% -spec update_user_requests_field(UserID::string(), NewReqsDay::integer()) -> tuple() || atom().
+% update_user_requests_field(UserID, NewReqsDay) ->
+%     JSON = lib_json:set_attr([{"requests_day", NewReqsDay}]),
+%     Update = lib_json:set_attr(doc, JSON),
+%     case erlastic_search:update_doc(?INDEX, "user", UserID, Update) of
+%         {error, {Code, Body}} ->
+%             ErrorString = api_help:generate_error(Body, Code),
+%             {error, Code, ErrorString};
+%         {ok, _} -> ok
+%     end.
 
 
 -spec authorization_rules_collection(Method::atom(), Resource::string()) -> boolean().
