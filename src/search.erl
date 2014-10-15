@@ -27,7 +27,7 @@
 %% Returns: {ok, undefined}
 %% @end
 -spec init([]) -> {ok, undefined}.
-init([]) -> 
+init([]) ->
 		{ok, undefined}.
 
 
@@ -39,7 +39,7 @@ init([]) ->
 %% @end
 -spec allowed_methods(ReqData::tuple(), State::string()) -> {list(), tuple(), string()}.
 allowed_methods(ReqData, State) ->
-		case api_help:parse_path(wrq:path(ReqData)) of                
+		case api_help:parse_path(wrq:path(ReqData)) of
 				[{"_search"}] ->
 						{['POST','GET'], ReqData, State};
                 [{"_history"}] ->
@@ -51,8 +51,8 @@ allowed_methods(ReqData, State) ->
 
 %% @doc
 %% Function: content_types_provided/2
-%% Purpose: based on the Accept header on a 'GET' request, we provide different media types to the client. 
-%%          A code 406 is returned to the client if we cannot return the media-type that the user has requested. 
+%% Purpose: based on the Accept header on a 'GET' request, we provide different media types to the client.
+%%          A code 406 is returned to the client if we cannot return the media-type that the user has requested.
 %% Returns: {[{Mediatype, Handler}], ReqData, State}
 %% @end
 -spec content_types_provided(ReqData::tuple(), State::string()) -> {list(), tuple(), string()}.
@@ -63,7 +63,7 @@ content_types_provided(ReqData, State) ->
 %% @doc
 %% Function: content_types_accepted/2
 %% Purpose: based on the content-type on a 'POST' or 'PUT', we know which kind of data that is allowed to be sent to the server.
-%%          A code 406 is returned to the client if we don't accept a media type that the client has sent. 
+%%          A code 406 is returned to the client if we don't accept a media type that the client has sent.
 %% Returns: {[{Mediatype, Handler}], ReqData, State}
 %% @end
 -spec content_types_accepted(ReqData::tuple(), State::string()) -> {list(), tuple(), string()}.
@@ -84,24 +84,28 @@ content_types_accepted(ReqData, State) ->
 %% @end
 -spec get_search(ReqData::tuple(), State::string()) -> {string(), tuple(), string()}.
 get_search(ReqData, State) ->
-    case api_help:is_search(ReqData) of
-        false -> 
-            case wrq:get_qs_value("size",ReqData) of 
-                    undefined ->
-                        NrValues = 25;
-                    Values ->
-                        {NrValues, _} = string:to_integer(Values)
-            end,
-            case wrq:get_qs_value("stream_id",ReqData) of 
-                    undefined ->
-                        ErrorString = api_help:generate_error(<<"Invalid stream_id">>, 405),
-                        {{halt, 405}, wrq:set_resp_body(ErrorString, ReqData), State};
-                    StreamIds ->
-                        IdList = string:tokens(StreamIds, ","),
-                        {get_history(IdList, NrValues, "{\"history\":[]}"), ReqData, State}
-            end;
-        true ->
-            {{halt, 501}, wrq:set_resp_body("Please use POST search instead.", ReqData), State}
+    case openidc:auth_request(ReqData) of
+        {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+        {ok, _} ->
+            case api_help:is_search(ReqData) of
+                false ->
+                    case wrq:get_qs_value("size",ReqData) of
+                            undefined ->
+                                NrValues = 25;
+                            Values ->
+                                {NrValues, _} = string:to_integer(Values)
+                    end,
+                    case wrq:get_qs_value("stream_id",ReqData) of
+                            undefined ->
+                                ErrorString = api_help:generate_error(<<"Invalid stream_id">>, 405),
+                                {{halt, 405}, wrq:set_resp_body(ErrorString, ReqData), State};
+                            StreamIds ->
+                                IdList = string:tokens(StreamIds, ","),
+                                {get_history(IdList, NrValues, "{\"history\":[]}"), ReqData, State}
+                    end;
+                true ->
+                    {{halt, 501}, wrq:set_resp_body("Please use POST search instead.", ReqData), State}
+            end
     end.
 
 %% @doc
@@ -115,93 +119,79 @@ get_search(ReqData, State) ->
 %% @end
 -spec process_post(ReqData::tuple(), State::string()) -> {true, tuple(), string()}.
 process_post(ReqData, State) ->
-		process_search_post(ReqData,State).
-
-%% @doc
-%% Function: process_search_post/2
-%% Purpose: Used to handle search requests that come from POST requests
-%% Returns: {Success, ReqData, State}, where Success is true if the search request is
-%% successful and false otherwise.
-%% @end
--spec process_search_post(ReqData::term(),State::term()) -> {boolean(), term(), term()}.
-process_search_post(ReqData, State) ->
-    erlang:display("search with json request"),
-    case wrq:get_qs_value("size",ReqData) of 
-        undefined ->
-            Size = "10";
-        SizeParam ->
-            Size = SizeParam
-    end,
-	case wrq:get_qs_value("sort",ReqData) of
-        undefined ->
-            Sort = "user_ranking.average";
-        SortParam ->
-            Sort = SortParam
-    end,
-    case wrq:get_qs_value("from",ReqData) of
-        undefined ->
-            From = "0";
-        FromParam ->
-            From = FromParam
-    end,
-    case wrq:get_qs_value("location",ReqData) of
-        undefined ->
-            LocationParam = false;
-        "true" ->
-            LocationParam = true;
-        _ ->
-            LocationParam = false
-    end,
-    {Json,_,_} = api_help:json_handler(ReqData,State),
-    FilteredJson = filter_json(Json, From, Size, Sort, LocationParam),
-    case erlastic_search:search_json(#erls_params{},?INDEX, "stream", FilteredJson) of % Maybe wanna take more
-            {error, Reason1} ->
-                StreamSearch = {error, Reason1};
-            {ok,List1} ->
-			case lib_json:get_field(FilteredJson, "query.filtered.query.query_string.query") of
-				undefined ->
-					erlang:display("No query string text, cannot add a suggestion.");
-				QueryString ->
-                    add_query_suggestion(QueryString)
-			end,
-			StreamSearch = lib_json:encode(List1) % May need to convert
-    end,
-    FilteredJson2 = filter_json(Json, From, Size, Sort, false),
-    case erlastic_search:search_json(#erls_params{},?INDEX, "virtual_stream", lib_json:rm_field(FilteredJson2, "sort")) of % Maybe wanna take more
-            {error, Reason2} ->
-                VStreamSearch = {error, Reason2};
-            {ok,List2} ->
-                VStreamSearch = lib_json:encode(List2) % May need to convert
-    end,
-    case erlastic_search:search_json(#erls_params{},?INDEX, "user", lib_json:rm_field(FilteredJson2, "sort")) of % Maybe wanna take more
-            {error, Reason3} ->
-                    UserSearch = {error, Reason3};
-            {ok,List3} -> 
-    			UserSearch = lib_json:encode(List3) % May need to convert
-     end,
-	% check search-results for error
-    case {StreamSearch, VStreamSearch, UserSearch} of
-        {{error, {Body, Code}},_,_} ->
-            ErrorString = api_help:generate_error(Body, Code),
-            {{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
-        {_,{error, {Body2, Code2}},_} ->
-            ErrorString = api_help:generate_error(Body2, Code2),
-            {{halt, Code2}, wrq:set_resp_body(ErrorString, ReqData), State};
-        {_,_,{error, {Body3, Code3}}} ->
-            ErrorString = api_help:generate_error(Body3, Code3),
-            {{halt, Code3}, wrq:set_resp_body(ErrorString, ReqData), State};
-        _ ->
-            SearchResults = "{\"streams\":"++ StreamSearch ++",\"vstreams\":"++ VStreamSearch ++",\"users\":"++ UserSearch ++"}",
-            {true,wrq:set_resp_body(SearchResults,ReqData),State}
+    case openidc:auth_request(ReqData) of
+        {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+        {ok, _} ->
+            erlang:display("search with json request"),
+            case wrq:get_qs_value("size",ReqData) of
+                undefined ->
+                    Size = "10";
+                SizeParam ->
+                    Size = SizeParam
+            end,
+        	case wrq:get_qs_value("sort",ReqData) of
+                undefined ->
+                    Sort = "user_ranking.average";
+                SortParam ->
+                    Sort = SortParam
+            end,
+            case wrq:get_qs_value("from",ReqData) of
+                undefined ->
+                    From = "0";
+                FromParam ->
+                    From = FromParam
+            end,
+            case wrq:get_qs_value("location",ReqData) of
+                undefined ->
+                    LocationParam = false;
+                "true" ->
+                    LocationParam = true;
+                _ ->
+                    LocationParam = false
+            end,
+            {Json,_,_} = api_help:json_handler(ReqData,State),
+            FilteredJson = filter_json(Json, From, Size, Sort, LocationParam),
+            case erlastic_search:search_json(#erls_params{},?INDEX, "stream", FilteredJson) of % Maybe wanna take more
+                    {error, Reason1} ->
+                        StreamSearch = {error, Reason1};
+                    {ok,List1} ->
+        			case lib_json:get_field(FilteredJson, "query.filtered.query.query_string.query") of
+        				undefined ->
+        					erlang:display("No query string text, cannot add a suggestion.");
+        				QueryString ->
+                            add_query_suggestion(QueryString)
+        			end,
+        			StreamSearch = lib_json:encode(List1) % May need to convert
+            end,
+            FilteredJson2 = filter_json(Json, From, Size, Sort, false),
+            case erlastic_search:search_json(#erls_params{},?INDEX, "virtual_stream", lib_json:rm_field(FilteredJson2, "sort")) of % Maybe wanna take more
+                    {error, Reason2} ->
+                        VStreamSearch = {error, Reason2};
+                    {ok,List2} ->
+                        VStreamSearch = lib_json:encode(List2) % May need to convert
+            end,
+            case erlastic_search:search_json(#erls_params{},?INDEX, "user", lib_json:rm_field(FilteredJson2, "sort")) of % Maybe wanna take more
+                    {error, Reason3} ->
+                            UserSearch = {error, Reason3};
+                    {ok,List3} ->
+            			UserSearch = lib_json:encode(List3) % May need to convert
+             end,
+        	% check search-results for error
+            case {StreamSearch, VStreamSearch, UserSearch} of
+                {{error, {Body, Code}},_,_} ->
+                    ErrorString = api_help:generate_error(Body, Code),
+                    {{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+                {_,{error, {Body2, Code2}},_} ->
+                    ErrorString = api_help:generate_error(Body2, Code2),
+                    {{halt, Code2}, wrq:set_resp_body(ErrorString, ReqData), State};
+                {_,_,{error, {Body3, Code3}}} ->
+                    ErrorString = api_help:generate_error(Body3, Code3),
+                    {{halt, Code3}, wrq:set_resp_body(ErrorString, ReqData), State};
+                _ ->
+                    SearchResults = "{\"streams\":"++ StreamSearch ++",\"vstreams\":"++ VStreamSearch ++",\"users\":"++ UserSearch ++"}",
+                    {true,wrq:set_resp_body(SearchResults,ReqData),State}
+            end
     end.
-	   
-%% GROUPS ARE NOT IMPLEMENTED
-%%         case erlastic_search:search_json(#erls_params{},?INDEX, "group", FilteredJson) of % Maybe wanna take more
-%%                 {error,Reason} -> {{halt,Reason}, ReqData, State};
-%%                 {ok,List} -> {true,wrq:set_resp_body(json_encode(List),ReqData),State} % May need to convert
-%%         end.
-
-
 
 
 %% @doc
@@ -217,7 +207,7 @@ get_history([Head|Rest], NrValues, Acc) ->
                 ErrorString = api_help:generate_error(Body, Code),
                 IdAndDataJson = "{\"stream_id\":\""++Head++"\",\"data\":{\"error\": \""++ErrorString++"\"}";
         {ok,JsonStruct} ->
-                IdAndDataJson = parse_datapoints(lib_json:get_field(JsonStruct, "hits.hits"),"{\"stream_id\":\""++Head++"\",\"data\":[]}")  
+                IdAndDataJson = parse_datapoints(lib_json:get_field(JsonStruct, "hits.hits"),"{\"stream_id\":\""++Head++"\",\"data\":[]}")
     end,
     get_history(Rest, NrValues, lib_json:add_value(Acc,"history",IdAndDataJson)).
 
@@ -262,7 +252,7 @@ add_query_suggestion(QueryString) ->
                     end
             end
     end.
-    
+
 
 
 
@@ -282,14 +272,14 @@ filter_json(Json) ->
 %% Returns: JSON string that is updated with filter and the from size parameters
 %% @end
 filter_json(Json, From, Size, Sort, false) ->
-	case lib_json:get_field(Json, "sort") of 
-		undefined -> 
-			UseSort = "\"" ++ Sort ++ "\"", 
+	case lib_json:get_field(Json, "sort") of
+		undefined ->
+			UseSort = "\"" ++ Sort ++ "\"",
 			SortJson = Json;
-		SortValue when is_binary(SortValue) -> 
+		SortValue when is_binary(SortValue) ->
 			UseSort = "\"" ++ binary_to_list(SortValue) ++ "\"",
 			SortJson = lib_json:rm_field(Json, "sort");
-		SortValue -> 
+		SortValue ->
 			UseSort = SortValue,
 			SortJson = lib_json:rm_field(Json, "sort")
 	end,
@@ -300,14 +290,14 @@ filter_json(Json, From, Size, Sort, false) ->
 	",\"query\" : {\"filtered\" : "++NewJson++
 	",\"filter\" : {\"bool\" : {\"must_not\" : {\"term\" : {\"private\" : \"true\"}}}}}}}";
 filter_json(Json, From, Size, Sort, true) ->
-    case lib_json:get_field(Json, "sort") of 
-        undefined -> 
-            UseSort = "\"" ++ Sort ++ "\"", 
+    case lib_json:get_field(Json, "sort") of
+        undefined ->
+            UseSort = "\"" ++ Sort ++ "\"",
             SortJson = Json;
-        SortValue when is_binary(SortValue) -> 
+        SortValue when is_binary(SortValue) ->
             UseSort = "\"" ++ binary_to_list(SortValue) ++ "\"",
             SortJson = lib_json:rm_field(Json, "sort");
-        SortValue -> 
+        SortValue ->
             UseSort = SortValue,
             SortJson = lib_json:rm_field(Json, "sort")
     end,
