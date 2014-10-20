@@ -496,7 +496,6 @@ build_user_json(Data, AccToken, RefToken) ->
     end,
 
     Email = list_to_binary(LID ++ "@openid.ericsson"),
-    Password = "",
     Description = proplists:get_value(<<"occupation">>, Data),
 
     {struct, Name} = proplists:get_value(<<"name">>, Data),
@@ -509,7 +508,6 @@ build_user_json(Data, AccToken, RefToken) ->
     mochijson2:encode({struct,[
         {username, Username},
         {email, Email},
-        {password, Password},
         {firstname, First},
         {lastname, Last},
         {description, Description},
