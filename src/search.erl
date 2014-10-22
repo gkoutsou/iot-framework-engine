@@ -84,24 +84,29 @@ content_types_accepted(ReqData, State) ->
 %% @end
 -spec get_search(ReqData::tuple(), State::string()) -> {string(), tuple(), string()}.
 get_search(ReqData, State) ->
-    case api_help:is_search(ReqData) of
-        false ->
-            case wrq:get_qs_value("size",ReqData) of
-                    undefined ->
-                        NrValues = 25;
-                    Values ->
-                        {NrValues, _} = string:to_integer(Values)
-            end,
-            case wrq:get_qs_value("stream_id",ReqData) of
-                    undefined ->
-                        ErrorString = api_help:generate_error(<<"Invalid stream_id">>, 405),
-                        {{halt, 405}, wrq:set_resp_body(ErrorString, ReqData), State};
-                    StreamIds ->
-                        IdList = string:tokens(StreamIds, ","),
-                        {get_history(IdList, NrValues, "{\"history\":[]}"), ReqData, State}
-            end;
-        true ->
-            {{halt, 501}, wrq:set_resp_body("Please use POST search instead.", ReqData), State}
+    case openidc:auth_request(ReqData) of
+        {error, Status, Msg} ->
+            {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+        {ok, _} ->
+            case api_help:is_search(ReqData) of
+                false ->
+                    case wrq:get_qs_value("size",ReqData) of
+                            undefined ->
+                                NrValues = 25;
+                            Values ->
+                                {NrValues, _} = string:to_integer(Values)
+                    end,
+                    case wrq:get_qs_value("stream_id",ReqData) of
+                            undefined ->
+                                ErrorString = api_help:generate_error(<<"Invalid stream_id">>, 405),
+                                {{halt, 405}, wrq:set_resp_body(ErrorString, ReqData), State};
+                            StreamIds ->
+                                IdList = string:tokens(StreamIds, ","),
+                                {get_history(IdList, NrValues, "{\"history\":[]}"), ReqData, State}
+                    end;
+                true ->
+                    {{halt, 501}, wrq:set_resp_body("Please use POST search instead.", ReqData), State}
+            end
     end.
 
 %% @doc
@@ -115,7 +120,13 @@ get_search(ReqData, State) ->
 %% @end
 -spec process_post(ReqData::tuple(), State::string()) -> {true, tuple(), string()}.
 process_post(ReqData, State) ->
-		process_search_post(ReqData,State).
+    case openidc:auth_request(ReqData) of
+        {error, Status, Msg} ->
+            {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+        {ok, _} ->
+            process_search_post(ReqData,State)
+    end.
+
 
 %% @doc
 %% Function: process_search_post/2
@@ -166,13 +177,14 @@ process_search_post(ReqData, State) ->
 			end,
 			StreamSearch = lib_json:encode(List1) % May need to convert
     end,
-    FilteredJson2 = filter_json(Json, From, Size, Sort, false),
-    case erlastic_search:search_json(#erls_params{},?INDEX, "virtual_stream", lib_json:rm_field(FilteredJson2, "sort")) of % Maybe wanna take more
-            {error, Reason2} ->
-                VStreamSearch = {error, Reason2};
-            {ok,List2} ->
-                VStreamSearch = lib_json:encode(List2) % May need to convert
-    end,
+
+    % FilteredJson2 = filter_json(Json, From, Size, Sort, false),
+    % case erlastic_search:search_json(#erls_params{},?INDEX, "virtual_stream", lib_json:rm_field(FilteredJson2, "sort")) of % Maybe wanna take more
+    %         {error, Reason2} ->
+    %             VStreamSearch = {error, Reason2};
+    %         {ok,List2} ->
+    %             VStreamSearch = lib_json:encode(List2) % May need to convert
+    % end,
 
     U_Filter = filter_json_users(Json, From, Size, Sort),
     case erlastic_search:search_json(#erls_params{},?INDEX, "user", U_Filter) of % Maybe wanna take more
@@ -180,30 +192,35 @@ process_search_post(ReqData, State) ->
                     UserSearch = {error, Reason3};
             {ok,List3} ->
     			UserSearch = lib_json:encode(List3) % May need to convert
-     end,
+    end,
+
 	% check search-results for error
-    case {StreamSearch, VStreamSearch, UserSearch} of
-        {{error, {Body, Code}},_,_} ->
+    % case {StreamSearch, VStreamSearch, UserSearch} of
+    %     {{error, {Body, Code}},_,_} ->
+    %         ErrorString = api_help:generate_error(Body, Code),
+    %         {{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+    %     {_,{error, {Body2, Code2}},_} ->
+    %         ErrorString = api_help:generate_error(Body2, Code2),
+    %         {{halt, Code2}, wrq:set_resp_body(ErrorString, ReqData), State};
+    %     {_,_,{error, {Body3, Code3}}} ->
+    %         ErrorString = api_help:generate_error(Body3, Code3),
+    %         {{halt, Code3}, wrq:set_resp_body(ErrorString, ReqData), State};
+    %     _ ->
+    %         SearchResults = "{\"streams\":"++ StreamSearch ++",\"vstreams\":"++ VStreamSearch ++",\"users\":"++ UserSearch ++"}",
+    %         {true,wrq:set_resp_body(SearchResults,ReqData),State}
+    % end.
+
+    case {StreamSearch, UserSearch} of
+        {{error, {Body, Code}},_} ->
             ErrorString = api_help:generate_error(Body, Code),
             {{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
-        {_,{error, {Body2, Code2}},_} ->
-            ErrorString = api_help:generate_error(Body2, Code2),
-            {{halt, Code2}, wrq:set_resp_body(ErrorString, ReqData), State};
-        {_,_,{error, {Body3, Code3}}} ->
+        {_,{error, {Body3, Code3}}} ->
             ErrorString = api_help:generate_error(Body3, Code3),
             {{halt, Code3}, wrq:set_resp_body(ErrorString, ReqData), State};
         _ ->
-            SearchResults = "{\"streams\":"++ StreamSearch ++",\"vstreams\":"++ VStreamSearch ++",\"users\":"++ UserSearch ++"}",
+            SearchResults = "{\"streams\":"++ StreamSearch ++",\"users\":"++ UserSearch ++"}",
             {true,wrq:set_resp_body(SearchResults,ReqData),State}
     end.
-
-%% GROUPS ARE NOT IMPLEMENTED
-%%         case erlastic_search:search_json(#erls_params{},?INDEX, "group", FilteredJson) of % Maybe wanna take more
-%%                 {error,Reason} -> {{halt,Reason}, ReqData, State};
-%%                 {ok,List} -> {true,wrq:set_resp_body(json_encode(List),ReqData),State} % May need to convert
-%%         end.
-
-
 
 
 %% @doc
