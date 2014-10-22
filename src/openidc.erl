@@ -40,7 +40,7 @@
 -define(STATUS_AUTHORISATION_FAIL, 401).
 -define(STATUS_TOO_MANY_REQUESTS, 429).
 
--define(REQUESTS_DAY_LIMIT, 5).
+-define(REQUESTS_DAY_LIMIT, 500).
 
 
 % %% @doc
@@ -299,7 +299,9 @@ check_requests_day(Username) ->
         {error, _} -> % Insert a new record
             JSON = lib_json:set_attrs([
                 {user_id, UserID},
-                {number, 0}
+                {number, 0},
+                {"_ttl.enabled", true},
+                {"_ttl.default", "1d"}
             ]),
             erlang:display(JSON),
             erlastic_search:index_doc_with_id(?INDEX, TableName, UserID, JSON),
