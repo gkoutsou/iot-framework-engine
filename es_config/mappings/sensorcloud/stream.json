@@ -68,15 +68,23 @@
 				"type" : "long"
 			},
 			"location" : {
-				"properties" : {
-					"lon" : {
-						"type" : "float"
-					},
-					"lat" : {
-						"type" : "float"
-					}
-				}
+				"type" : "geo_point",
+				"lat_lon" : true,
+				"geohash" : true,
+				"geohash_prefix" : true,
+				"normalize" : false,
+				"validate" : true
 			},
+			// "location" : {
+			// 	"properties" : {
+			// 		"lon" : {
+			// 			"type" : "float"
+			// 		},
+			// 		"lat" : {
+			// 			"type" : "float"
+			// 		}
+			// 	}
+			// },
 			"resource" : {
 				"properties" : {
 					"resource_type" : {
