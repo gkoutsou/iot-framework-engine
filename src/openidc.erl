@@ -345,7 +345,10 @@ authorization_rules_individual(Method, Resource, UserRequested, Private, TokenOw
                 {'PUT', "rank"} -> %true;          % Exception 4: Can ONLY PUT other's ranking of a stream
                     erlang:display("exp.4"), true;
 
-                _ ->erlang:display("rule"), false                        % Rule: Anything else is forbidden
+                {_, "_search"} ->
+                    erlang:display("search rule"), true;
+
+                _ -> erlang:display("rule"), false                        % Rule: Anything else is forbidden
             end;
 
         _ -> false                                %       Anything else is forbidden

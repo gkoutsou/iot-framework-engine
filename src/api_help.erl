@@ -350,23 +350,26 @@ get_info_request(ReqData) ->
       [{"users", Id}, {Res}]                    -> {         Res, Fetch_username("user", Id)};
       [{"users", Id}, {Res, Sid}, {"triggers"}] -> {  "triggers", Fetch_username(Res, Id)};
 
-      [{"streams"}]                             -> {   "streams", undefined};
+      [{"streams"}]                             -> {   "streams", {undefined, false}};
       [{"streams", Id}]                         -> {   "streams", Fetch_username("stream", Id)};
       [{"streams", Id}, {"_rank"}]              -> {      "rank", Fetch_username("stream", Id)};
       [{"streams", Id}, {"data"}]               -> {"datapoints", Fetch_username("stream", Id)};
       [{"streams", Id}, {"data", _}]            -> {"datapoints", Fetch_username("stream", Id)};
       [{"streams", Id}, _]                      -> {   "streams", Fetch_username("stream", Id)};
 
-      [{"vstreams"}]                            -> {  "vstreams", undefined};
+      [{"vstreams"}]                            -> {  "vstreams", {undefined, false}};
       [{"vstreams", Id}]                        -> {  "vstreams", Fetch_username("vstream", Id)};
       [{"vstreams", Id}, {"data"}]              -> {"datapoints", Fetch_username("vstream", Id)};
       [{"vstreams", Id}, {"data", _}]           -> {"datapoints", Fetch_username("vstream", Id)};
       [{"vstreams", Id}, _]                     -> {  "vstreams", Fetch_username("vstream", Id)};
 
-      [{"resources"}]                           -> { "resources", undefined};
+      [{"resources"}]                           -> { "resources", {undefined, false}};
       [{"resources", Id}]                       -> { "resources", Fetch_username("resource", Id)};
 
-      _                                         -> {   undefined, undefined}
+			[{"_search"}]                             -> {   "_search", {search, false}};
+			[{"_search", _}]                          -> {   "_search", {search, false}};
+
+      _                                         -> {   undefined, {undefined, undefined}}
   end,
 
 	Method = wrq:method(ReqData),

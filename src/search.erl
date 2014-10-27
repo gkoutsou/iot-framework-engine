@@ -319,6 +319,7 @@ filter_json(Json, From, Size, Sort, false) ->
 	",\"query\" : {\"filtered\" : "++NewJson++
 	",\"filter\" : {\"bool\" : {\"must_not\" : {\"term\" : {\"private\" : \"true\"}}}}}}}";
 filter_json(Json, From, Size, Sort, true) ->
+    erlang:display(Json),
     case lib_json:get_field(Json, "sort") of
         undefined ->
             UseSort = "\"" ++ Sort ++ "\"",
@@ -331,7 +332,8 @@ filter_json(Json, From, Size, Sort, true) ->
             SortJson = lib_json:rm_field(Json, "sort")
     end,
     NewJson = string:sub_string(SortJson,1,string:len(SortJson)-1),
-    "{\"script_fields\":{\"location\":{\"script\":\"doc['location'].value\"}},\"fields\":\"_source\","++
+    % "{\"script_fields\":{\"location\":{\"script\":\"doc['location'].value\"}},\"fields\":\"_source\","++
+    "{\"fields\":\"_source\","++
     "\"from\" : "++From++
     ",\"size\" : "++Size++
     ",\"sort\" : " ++UseSort++

@@ -68,12 +68,14 @@
 				"type" : "long"
 			},
 			"location" : {
-				"type" : "geo_point",
-				"lat_lon" : true,
-				"geohash" : true,
-				"geohash_prefix" : true,
-				"normalize" : false,
-				"validate" : true
+				"properties" : {
+					"lon" : {
+						"type" : "float"
+					},
+					"lat" : {
+						"type" : "float"
+					}
+				}
 			},
 			"resource" : {
 				"properties" : {
@@ -129,9 +131,9 @@
 		}
 	}
 }
-				
-				
-				
-				
-				
-				
+
+
+
+
+
+
