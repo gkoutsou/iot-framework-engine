@@ -16,7 +16,7 @@
 
 %% Fields for users
 -define(RESTRCITEDUPDATEUSERS, ["username", "subscriptions"]).
--define(ACCEPTEDFIELDSUSERS, ["username", "email", "firstname", "lastname", "description", "password", "private", "access_token", "refresh_token"]).
+-define(ACCEPTEDFIELDSUSERS, ["username", "email", "firstname", "lastname", "description", "password", "private", "image_url", "access_token", "refresh_token"]).
 
 %% Fields for resources
 -define(RESTRICTED_RESOURCES_UPDATE, []).

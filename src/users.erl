@@ -407,13 +407,13 @@ create_user(ReqData, State) ->
 
     case {api_help:do_only_fields_exist(UserJSON,?ACCEPTEDFIELDSUSERS),UserNameApproved,UserName =/= undefined} of
         {_,_,false} ->
-            {{halt,403}, wrq:set_resp_body("Username missing", ReqData), State};
+            {{halt,403}, wrq:set_resp_body("{\"error\": \"Username missing\"}", ReqData), State};
         {false,_,_} ->
-            {{halt,403}, wrq:set_resp_body("Unsupported field(s)", ReqData), State};
+            {{halt,403}, wrq:set_resp_body("{\"error\": \"Unsupported field(s)\"}", ReqData), State};
         {true,false,_} ->
-            {{halt,409}, wrq:set_resp_body("Non unique username given", ReqData), State};
+            {{halt,409}, wrq:set_resp_body("{\"error\": \"Non unique username given\"}", ReqData), State};
         {true,invalidcharacters,_} ->
-            {{halt,409}, wrq:set_resp_body("Invalid characters in username. You may only use a-z, 0-9, _ and -", ReqData), State};
+            {{halt,409}, wrq:set_resp_body("{\"error\": \"Invalid characters in username. You may only use a-z, 0-9, _ and -\"}", ReqData), State};
         {true,{Code1,Body1},_} ->
             ErrorString1 = api_help:generate_error(Body1, Code1),
             {{halt, Code1}, wrq:set_resp_body(ErrorString1, ReqData), State};
@@ -622,7 +622,7 @@ get_user_model(ReqData, State) ->
             case erlastic_search:search_json(#erls_params{},?INDEX, "user", Query) of
                 {error, {Code, Body}} ->
                     ErrorString = api_help:generate_error(Body, Code),
-                    {{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+                    {{halt, Code}, wrq:set_resp_body("{\"error\": \"User not found\"}", ReqData), State};
                 {ok,JsonStruct} ->
                     FinalJson = api_help:get_list_and_add_password(JsonStruct),
                     {FinalJson, ReqData, State}
@@ -630,7 +630,7 @@ get_user_model(ReqData, State) ->
 
         Id ->
             case get_user_by_name(Id) of
-                {error, Msg} -> {{halt, 404}, wrq:set_resp_body(Msg, ReqData), State};
+                {error, _} -> {{halt, 404}, wrq:set_resp_body("{\"error\": \"User not found\"}", ReqData), State};
                 {ok, JSON}   -> {true, wrq:set_resp_body(JSON, ReqData), State}
             end
     end.
