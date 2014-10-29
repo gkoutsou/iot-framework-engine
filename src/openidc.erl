@@ -397,7 +397,9 @@ check_valid_token(TokenName, TokenValue) ->
             case analyse_token_response(GoogleJSON) of
                 {error, Error}     -> {error, Error};
                 {ok, false, _}     -> {error, "Token not valid"};
-                {ok, true, UserID} -> {ok, UserID}
+                {ok, true, UserID} ->
+                    replace_token(UserID, "Access-Token",  TokenValue),
+                    {ok, UserID}
             end
     end.
 
