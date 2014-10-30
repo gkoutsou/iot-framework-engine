@@ -631,7 +631,7 @@ get_user_model(ReqData, State) ->
         Id ->
             case get_user_by_name(Id) of
                 {error, _} -> {{halt, 404}, wrq:set_resp_body("{\"error\": \"User not found\"}", ReqData), State};
-                {ok, JSON}   -> {true, wrq:set_resp_body(JSON, ReqData), State}
+                {ok, JSON}   -> {lib_json:encode(JSON), ReqData, State}
             end
     end.
 
