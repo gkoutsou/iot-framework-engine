@@ -375,7 +375,7 @@ authorization_rules_collection(Method, Resource) ->
     % This rule is checked in cases when a GET /users or POST to /streams, without a specific user id, is requested
     ValidGET = ((Method == 'GET') and (Resource == "users")),
 
-    POSTResources = ((Resource == "users") or (Resource == "streams") or (Resource == "vstreams")),
+    POSTResources = ((Resource == "users") or (Resource == "streams") or (Resource == "vstreams") or (Resource == "triggers") or (Resource == "resources")),
     ValidPOST = ((Method == 'POST') and POSTResources),
     Res = ValidGET or ValidPOST,
     erlang:display("Rule 5"),
