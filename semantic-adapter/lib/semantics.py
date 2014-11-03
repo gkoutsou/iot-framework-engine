@@ -45,13 +45,14 @@ def __semantic_stream(g, stream, id):
 
     g.add((stream_node, FOAF.depiction, Literal(stream['description'])))
 
-    a,b = stream['location'].split(',')
+    lon = stream['location']['lon']
+    lat = stream['location']['lat']
     location = BNode()
     g.add((location, RDF.type, GEO.Point))
-    g.add((location, GEO.hasDataValue, Literal(a)))
+    g.add((location, GEO.hasDataValue, Literal(lon)))
     g.add((stream_node, FOAF.based_near, location))
     g.add((location, RDF.type, GEO.Point))
-    g.add((location, GEO.hasDataValue, Literal(b)))
+    g.add((location, GEO.hasDataValue, Literal(lat)))
     g.add((stream_node, FOAF.based_near, location))
 
     observation = BNode()
@@ -341,9 +342,10 @@ def __semantic_stream_citypulse(g, id):
 
     first_node = BNode()
     g.add((first_node, RDF.type, CT.Node))
-    a,b = stream['location'].split(',')
-    g.add((first_node, CT.hasLatitude, Literal(Decimal(a))))
-    g.add((first_node, CT.hasLongtitude, Literal(Decimal(b))))
+    lon = stream['location']['lon']
+    lat = stream['location']['lat']
+    g.add((first_node, CT.hasLongtitude, Literal(Decimal(lon))))
+    g.add((first_node, CT.hasLatitude, Literal(Decimal(lat))))
     g.add((first_node, CT.hasNodeName, Literal(stream['name'])))
 
     g.add((stream_node, CT.hasFirstNode, first_node))
