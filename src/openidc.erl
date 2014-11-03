@@ -40,7 +40,7 @@
 -define(STATUS_AUTHORISATION_FAIL, 401).
 -define(STATUS_TOO_MANY_REQUESTS, 429).
 
--define(REQUESTS_DAY_LIMIT, 500).
+-define(REQUESTS_DAY_LIMIT, 70000).
 
 
 % %% @doc
@@ -356,17 +356,6 @@ authorization_rules_individual(Method, Resource, UserRequested, Private, TokenOw
 
     erlang:display({"Granted Access:", Res}),
     Res.
-
-% -spec update_user_requests_field(UserID::string(), NewReqsDay::integer()) -> tuple() || atom().
-% update_user_requests_field(UserID, NewReqsDay) ->
-%     JSON = lib_json:set_attr([{"requests_day", NewReqsDay}]),
-%     Update = lib_json:set_attr(doc, JSON),
-%     case erlastic_search:update_doc(?INDEX, "user", UserID, Update) of
-%         {error, {Code, Body}} ->
-%             ErrorString = api_help:generate_error(Body, Code),
-%             {error, Code, ErrorString};
-%         {ok, _} -> ok
-%     end.
 
 
 -spec authorization_rules_collection(Method::atom(), Resource::string()) -> boolean().
