@@ -194,105 +194,134 @@ delete_data_points_with_stream_id(Id, Type) ->
 -spec process_post(ReqData::term(),State::term()) -> {boolean(), term(), term()}.
 process_post(ReqData, State) ->
 	case openidc:auth_request(ReqData) of
-        {error, Status, Msg} -> {{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
-        {ok, _} ->
-		    case api_help:is_search(ReqData) of
-		    	true  -> process_search_post(ReqData,State);
+    {error, Status, Msg} ->
+    	{{halt, Status}, wrq:set_resp_body(Msg, ReqData), State};
+    {ok, _} ->
+	    case api_help:is_search(ReqData) of
+		    true  -> process_search_post(ReqData,State);
 				false ->
-				    {Stream,_,_} = api_help:json_handler(ReqData, State),
-				    case lib_json:get_field(Stream,"multi_json") of
-					undefined ->
+				  {Stream,_,_} = api_help:json_handler(ReqData, State),
+				  case lib_json:get_field(Stream,"multi_json") of
+						undefined ->
 					    UserAdded = case proplists:get_value('user', wrq:path_info(ReqData)) of
-							    undefined ->
-								Stream;
-							    UId when is_list(UId) ->
-								lib_json:add_field(Stream,"user_id",binary:list_to_bin(string:to_lower(UId)));
-							    UId ->
-								lib_json:add_field(Stream,"user_id",UId)
+						    undefined             -> Stream;
+							  UId when is_list(UId) -> lib_json:add_field(Stream,"user_id",binary:list_to_bin(string:to_lower(UId)));
+							  UId                   -> lib_json:add_field(Stream,"user_id",UId)
 					    end,
+
 					    case lib_json:get_field(UserAdded,"user_id") of
-						undefined -> {false, wrq:set_resp_body("\"user_id missing\"",ReqData), State};
-						UserId ->
-							FinalUserAdded = lib_json:replace_field(UserAdded,"user_id",binary:list_to_bin(string:to_lower(binary_to_list(UserId)))),
-						    case {api_help:do_any_field_exist(FinalUserAdded,?RESTRICTED_STREAMS_CREATE),api_help:do_only_fields_exist(FinalUserAdded,?ACCEPTED_STREAMS_FIELDS)} of
-							{true,_} ->
-							    ResFields1 = lists:foldl(fun(X, Acc) -> X ++ ", " ++ Acc end, "", ?RESTRICTED_STREAMS_CREATE),
-							    ResFields2 = string:sub_string(ResFields1, 1, length(ResFields1)-2),
-							    {{halt,409}, wrq:set_resp_body("{\"ok\": false, \"error\":\"Error caused by restricted field in document, these fields are restricted : " ++ ResFields2 ++"\"}", ReqData), State};
-							{false,false} ->
-							    {{halt,403}, wrq:set_resp_body("{\"ok\": false, \"error\" :  \"Unsupported field(s)\"}", ReqData), State};
-							{false,true} ->
-							    case erlastic_search:get_doc(?INDEX, "user", string:to_lower(binary_to_list(UserId))) of
-									{ok, Json} ->
-								    	FieldsAdded = add_server_side_fields(UserAdded),
-									    %%Final = suggest:add_stream_suggestion_fields(FieldsAdded),
-									    case erlastic_search:index_doc(?INDEX, "stream", FieldsAdded) of
-										{error,{Code,Body}} ->
-										    ErrorString = api_help:generate_error(Body, Code),
-										    {{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
-										{ok,List} ->
-										    case lib_json:get_field(Stream, "resource.resource_type") of
-											undefined ->
-											    continue;
-											_ ->
-											    case resources:add_suggested_stream(Stream) of
-												{error, ErrorStr} ->
-												    erlang:display("Stream not added to the suggested streams:  " ++ ErrorStr);
-												ok ->
-												    erlang:display("New suggested stream")
-											    end
-										    end,
+								undefined -> {false, wrq:set_resp_body("\"user_id missing\"",ReqData), State};
+								UserId ->
+									BUID = binary:list_to_bin(string:to_lower(binary_to_list(UserId))),
+									FinalUserAdded = lib_json:replace_field(UserAdded, "user_id", BUID),
 
-											%% create a new poller in polling system
-											api_help:refresh(),
-											case lib_json:get_field(FieldsAdded, "polling") of
-											false->continue;
-											undefined->continue;
-											true->
-											    case lib_json:get_fields(FieldsAdded, ["uri", "polling_freq", "data_type", "parser"]) of
-													[undefined, _, _, _]-> erlang:display("you must provide uri for polling!"),
-																		   {{halt,403}, wrq:set_resp_body("Incorrect or mising uri.", ReqData), State};
-													[_, undefined, _, _]-> erlang:display("you must provide frequency for polling!"),
-																		   {{halt,403}, wrq:set_resp_body("Incorrect or mising polling frequency.", ReqData), State};
-													[_, _, undefined, _]-> erlang:display("you must provide data_type for polling!"),
-																		   {{halt,403}, wrq:set_resp_body("Incorrect or mising data_type.", ReqData), State};
-													[_, _, _, undefined]-> erlang:display("you must provide parser for polling"),
-																		   {{halt,403}, wrq:set_resp_body("Incorrect or mising parser.", ReqData), State};
-													[_, _, _, _]->
-														Stream_id = binary_to_list(lib_json:get_field(lib_json:to_string(List), "_id")),
-													    case whereis(polling_supervisor) of
-														undefined ->
-														    polling_system:start_link(),
-														    timer:sleep(1000);
-														_ ->
-														    continue
-													    end,
-													    NewPoller = #pollerInfo{stream_id = Stream_id,
-																    name = binary_to_list(lib_json:get_field(FieldsAdded, "name")),
-																    uri = binary_to_list(lib_json:get_field(FieldsAdded, "uri")),
-																    frequency = lib_json:get_field(FieldsAdded, "polling_freq"),
-																	data_type = binary_to_list(lib_json:get_field(FieldsAdded, "data_type")),
-																	parser = binary_to_list(lib_json:get_field(FieldsAdded, "parser"))
-																   },
-													    gen_server:cast(polling_supervisor, {create_poller, NewPoller}),
-														poll_help:create_poller_history(Stream_id)
-												end
-											end,
-											{true, wrq:set_resp_body(lib_json:encode(List), ReqData), State}
-									    end;
-									{error, {404, _}} ->
-									    {{halt,403}, wrq:set_resp_body("Incorrect or mising user_id.", ReqData), State};
-									{error, {Code2, Body2}} ->
-										ErrorString = api_help:generate_error(Body2, Code2),
-										{{halt, Code2}, wrq:set_resp_body(ErrorString, ReqData), State}
+									Fields1 = api_help:do_any_field_exist(FinalUserAdded, ?RESTRICTED_STREAMS_CREATE),
+									Fields2 = api_help:do_only_fields_exist(FinalUserAdded, ?ACCEPTED_STREAMS_FIELDS),
+						    	case {Fields1, Fields2} of
+										{true,_} ->
+							    		ResFields1 = lists:foldl(fun(X, Acc) -> X ++ ", " ++ Acc end, "", ?RESTRICTED_STREAMS_CREATE),
+							    		ResFields2 = string:sub_string(ResFields1, 1, length(ResFields1)-2),
+							    		Msg = "{\"ok\": false, \"error\":\"Error caused by restricted field in document, these fields are restricted : " ++ ResFields2 ++"\"}",
+							    		{{halt,409}, wrq:set_resp_body(Msg, ReqData), State};
 
-							    end
-						    end
+										{false,false} ->
+							    		{{halt,403}, wrq:set_resp_body("{\"ok\": false, \"error\" :  \"Unsupported field(s)\"}", ReqData), State};
+
+										{false,true} ->
+							    		case erlastic_search:get_doc(?INDEX, "user", string:to_lower(binary_to_list(UserId))) of
+												{ok, Json} ->
+													MinVal = binary_to_list(lib_json:get_field(UserAdded, "min_val")),
+													MaxVal = binary_to_list(lib_json:get_field(UserAdded, "max_val")),
+													erlang:display(MinVal),
+													erlang:display(MaxVal),
+													case MinVal > MaxVal of
+														true ->
+															ErrorString = "The field \"min_val\" is greater than \"max_val\"",
+															{{halt, 412}, wrq:set_resp_body(ErrorString, ReqData), State};
+														false ->
+										    			FieldsAdded = add_server_side_fields(UserAdded),
+											    		%% Final = suggest:add_stream_suggestion_fields(FieldsAdded),
+											    		case erlastic_search:index_doc(?INDEX, "stream", FieldsAdded) of
+																{error,{Code,Body}} ->
+												    			ErrorString = api_help:generate_error(Body, Code),
+												    			{{halt, Code}, wrq:set_resp_body(ErrorString, ReqData), State};
+																{ok,List} ->
+												    			case lib_json:get_field(Stream, "resource.resource_type") of
+																		undefined -> continue;
+																		_ ->
+																			case resources:add_suggested_stream(Stream) of
+																				{error, ErrorStr} ->
+														    					erlang:display("Stream not added to the suggested streams:  " ++ ErrorStr);
+																				ok ->
+														    					erlang:display("New suggested stream")
+													    				end
+												    			end,
+
+																	%% create a new poller in polling system
+																	api_help:refresh(),
+																	case lib_json:get_field(FieldsAdded, "polling") of
+																		undefined -> continue;
+																		false     -> continue;
+																		true      ->
+																	    case lib_json:get_fields(FieldsAdded, ["uri", "polling_freq", "data_type", "parser"]) of
+																				[undefined, _, _, _] ->
+																					erlang:display("you must provide uri for polling!"),
+																					{{halt,403}, wrq:set_resp_body("Incorrect or mising uri.", ReqData), State};
+
+																				[_, undefined, _, _] ->
+																					erlang:display("you must provide frequency for polling!"),
+																					{{halt,403}, wrq:set_resp_body("Incorrect or mising polling frequency.", ReqData), State};
+
+																				[_, _, undefined, _] ->
+																					erlang:display("you must provide data_type for polling!"),
+																					{{halt,403}, wrq:set_resp_body("Incorrect or mising data_type.", ReqData), State};
+
+																				[_, _, _, undefined] ->
+																					erlang:display("you must provide parser for polling"),
+																					{{halt,403}, wrq:set_resp_body("Incorrect or mising parser.", ReqData), State};
+
+																				[_, _, _, _]->
+																					Stream_id = binary_to_list(lib_json:get_field(lib_json:to_string(List), "_id")),
+															    				case whereis(polling_supervisor) of
+																						undefined ->
+																    					polling_system:start_link(),
+																    					timer:sleep(1000);
+																						_ ->
+																    					continue
+															    				end,
+
+															   					NewPoller = #pollerInfo{stream_id = Stream_id,
+																		    		name = binary_to_list(lib_json:get_field(FieldsAdded, "name")),
+																		    		uri = binary_to_list(lib_json:get_field(FieldsAdded, "uri")),
+																		    		frequency = lib_json:get_field(FieldsAdded, "polling_freq"),
+																						data_type = binary_to_list(lib_json:get_field(FieldsAdded, "data_type")),
+																						parser = binary_to_list(lib_json:get_field(FieldsAdded, "parser"))
+																		   		},
+
+															    				gen_server:cast(polling_supervisor, {create_poller, NewPoller}),
+																					poll_help:create_poller_history(Stream_id)
+																			end
+																	end,
+
+																	{true, wrq:set_resp_body(lib_json:encode(List), ReqData), State}
+											    		end
+											    end;
+
+												{error, {404, _}} ->
+													erlang:display(string:to_lower(binary_to_list(UserId))),
+									    		{{halt,403}, wrq:set_resp_body("Incorrect or mising user_id.", ReqData), State};
+
+												{error, {Code2, Body2}} ->
+													ErrorString = api_help:generate_error(Body2, Code2),
+													{{halt, Code2}, wrq:set_resp_body(ErrorString, ReqData), State}
+							    		end
+						    	end
 					    end;
-					JsonList ->
+
+						JsonList ->
 					    multi_json_streams(JsonList,ReqData,State,[])
-				    end
-		    end
+				  end
+		  end
 	end.
 
 

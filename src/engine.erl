@@ -11,10 +11,8 @@
 
 ensure_started(App) ->
     case application:start(App) of
-        ok ->
-            ok;
-        {error, {already_started, App}} ->
-            ok
+        ok -> ok;
+        {error, {already_started, App}} -> ok
     end.
 
 %% @spec start_link() -> {ok,Pid::pid()}
@@ -30,8 +28,7 @@ start_link() ->
     ensure_started(compiler),
     ensure_started(syntax_tools),
     ensure_started(mochiweb),
-    application:set_env(webmachine, webmachine_logger_module,
-                        webmachine_logger),
+    application:set_env(webmachine, webmachine_logger_module, webmachine_logger),
     ensure_started(webmachine),
     engine_sup:start_link().
 
@@ -48,8 +45,7 @@ start() ->
     ensure_started(compiler),
     ensure_started(syntax_tools),
     ensure_started(mochiweb),
-    application:set_env(webmachine, webmachine_logger_module,
-                       webmachine_logger),
+    application:set_env(webmachine, webmachine_logger_module, webmachine_logger),
     ensure_started(webmachine),
     application:start(engine).
 
@@ -68,19 +64,15 @@ stop() ->
     application:stop(public_key),
     application:stop(ibrowse),
     application:stop(inets),
-    case whereis(polling_monitor) of
-        undefined -> ok;
-        P_M_Pid ->
-            exit(P_M_Pid, "stop")
-    end,
-    case whereis(polling_supervisor) of
-        undefined -> ok;
-        P_S_Pid ->
-            exit(P_S_Pid, "stop")
-    end,
-    case whereis(vstream_sup) of
-        undefined -> ok;
-        V_S_Pid ->
-            exit(V_S_Pid, "stop")
-    end,
+    stop_if_running(polling_monitor),
+    stop_if_running(polling_supervisor),
+    stop_if_running(vstream_sup),
     Res.
+
+%% @spec stop() -> ok
+%% @doc Stop the given module if running using the PID
+stop_if_running(Atom) ->
+    case whereis(Atom) of
+        undefined -> ok;
+        Pid       -> exit(Pid, "stop")
+    end.

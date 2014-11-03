@@ -75,6 +75,16 @@
 				"normalize" : false,
 				"validate" : true
 			},
+			// "location" : {
+			// 	"properties" : {
+			// 		"lon" : {
+			// 			"type" : "float"
+			// 		},
+			// 		"lat" : {
+			// 			"type" : "float"
+			// 		}
+			// 	}
+			// },
 			"resource" : {
 				"properties" : {
 					"resource_type" : {
@@ -129,9 +139,9 @@
 		}
 	}
 }
-				
-				
-				
-				
-				
-				
+
+
+
+
+
+

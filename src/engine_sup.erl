@@ -55,7 +55,7 @@ init([]) ->
 		 undefined -> "priv/log";
 		 {ok, AnyDir} -> AnyDir
 	     end,
-    		 
+
     WebConfig = [
                  {ip, Ip},
                  {port, Port},

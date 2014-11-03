@@ -259,7 +259,8 @@ get_webmachine_url() ->
 get_and_add_id(JsonStruct) ->
     Id  = lib_json:get_field(JsonStruct, "_id"),
     SourceJson  = lib_json:get_field(JsonStruct, "_source"),
-    lib_json:add_value(SourceJson, "id", Id).
+    % lib_json:add_value(SourceJson, "id", Id).
+    JsonStruct.
 
 %% @doc
 %% Get the search results and performs get_and_add_id/1 on each
@@ -295,7 +296,11 @@ get_list_and_add_id(JsonStruct, JsonKey) ->
 get_and_add_password(JsonStruct) ->
     Id  = lib_json:get_field(JsonStruct, "fields.password"),
     SourceJson  = lib_json:get_field(JsonStruct, "_source"),
-    lib_json:add_value(SourceJson, "password", Id).
+    Pass = case Id == undefined of
+    	true -> Id;
+    	false -> lists:last(Id)
+    end,
+    lib_json:add_value(SourceJson, "password", Pass).
 
 %% @doc
 %% Get the search results and performs get_and_add_password/1 on each
@@ -309,14 +314,21 @@ get_list_and_add_password(JsonStruct) ->
     lib_json:set_attr(users, AddedPassword).
 
 %% @doc
-%% Function: get_info_request/1
+%% Function: uest/1
 %% Purpose: Retrieves the id from the path.
 %% Returns: Id
 %% @end
 -spec get_info_request(ReqData::tuple()) -> string().
 get_info_request(ReqData) ->
-    Fetch_username = fun(TableName, Id) ->
-    		erlang:display({"get_info_request", TableName, Id}),
+    Fetch_username = fun(Name, Id) ->
+    		erlang:display({"get_info_request", Name, Id}),
+    		TableName = case Name of
+    			"users"    -> "user";
+    			"streams"  -> "stream";
+    			"vstreams" -> "vstream";
+    			Otherwise  -> Otherwise
+    		end,
+
         case erlastic_search:get_doc(?INDEX, TableName, Id) of
             {error, _} -> {undefined, undefined};
             {ok, JSON} ->
@@ -327,39 +339,45 @@ get_info_request(ReqData) ->
 
                 UserID  = string:to_lower(binary_to_list(UID)),
                 Private = lib_json:get_field(JSON, "_source.private"),
+
                 {UserID, Private}
         end
     end,
 
+  {Resource, {UserRequested, Private}} = case api_help:parse_path(wrq:path(ReqData)) of
+      [{"users"}]                               -> {     "users", {undefined, false}};
+      [{"users", Id}]                           -> {     "users", Fetch_username("user", Id)};
+      [{"users", Id}, {Res, Sid}]               -> {         Res, Fetch_username(Res, Sid)};
+      [{"users", Id}, {Res}]                    -> {         Res, Fetch_username("user", Id)};
+      [{"users", Id}, {Res, Sid}, {"triggers"}] -> {  "triggers", Fetch_username(Res, Id)};
+
+      [{"streams"}]                             -> {   "streams", {undefined, false}};
+      [{"streams", Id}]                         -> {   "streams", Fetch_username("stream", Id)};
+      [{"streams", Id}, {"_rank"}]              -> {      "rank", Fetch_username("stream", Id)};
+      [{"streams", Id}, {"data"}]               -> {"datapoints", Fetch_username("stream", Id)};
+      [{"streams", Id}, {"data", _}]            -> {"datapoints", Fetch_username("stream", Id)};
+      [{"streams", Id}, _]                      -> {   "streams", Fetch_username("stream", Id)};
+
+      [{"vstreams"}]                            -> {  "vstreams", {undefined, false}};
+      [{"vstreams", Id}]                        -> {  "vstreams", Fetch_username("vstream", Id)};
+      [{"vstreams", Id}, {"data"}]              -> {"datapoints", Fetch_username("vstream", Id)};
+      [{"vstreams", Id}, {"data", _}]           -> {"datapoints", Fetch_username("vstream", Id)};
+      [{"vstreams", Id}, _]                     -> {  "vstreams", Fetch_username("vstream", Id)};
+
+      [{"resources"}]                           -> { "resources", {undefined, false}};
+			[{"resources", Id}]                       -> { "resources", {undefined, false}};
+
+      [{"_search"}]                             -> {   "_search", {search, false}};
+      [{"_search", _}]                          -> {   "_search", {search, false}};
+
+      [{"suggest"}] 														-> {   "suggest", {undefined, false}};
+      [{"suggest", _}] 													-> {   "suggest", {undefined, false}};
+
+      _                                         -> {   undefined, {undefined, undefined}}
+  end,
+
 	Method = wrq:method(ReqData),
-
-    {Resource, {UserRequested, Private}} = case api_help:parse_path(wrq:path(ReqData)) of
-        [{"users"}]                               -> {     "users", {undefined, false}};
-        [{"users", Id}]                           -> {     "users", Fetch_username("user", Id)};
-        [{"users", Id}, {Res, Sid}]               -> {         Res, Fetch_username(Res, Sid)};
-        [{"users", Id}, {Res}]                    -> {         Res, Fetch_username("user", Id)};
-        [{"users", Id}, {Res, Sid}, {"triggers"}] -> {  "triggers", Fetch_username(Res, Id)};
-
-        [{"streams"}]                             -> {   "streams", undefined};
-        [{"streams", Id}]                         -> {   "streams", Fetch_username("stream", Id)};
-        [{"streams", Id}, {"_rank"}]              -> {      "rank", Fetch_username("stream", Id)};
-        [{"streams", Id}, {"data"}]               -> {"datapoints", Fetch_username("stream", Id)};
-        [{"streams", Id}, {"data", _}]            -> {"datapoints", Fetch_username("stream", Id)};
-        [{"streams", Id}, _]                      -> {   "streams", Fetch_username("stream", Id)};
-
-        [{"vstreams"}]                            -> {  "vstreams", undefined};
-        [{"vstreams", Id}]                        -> {  "vstreams", Fetch_username("vstream", Id)};
-        [{"vstreams", Id}, {"data"}]              -> {"datapoints", Fetch_username("vstream", Id)};
-        [{"vstreams", Id}, {"data", _}]           -> {"datapoints", Fetch_username("vstream", Id)};
-        [{"vstreams", Id}, _]                     -> {  "vstreams", Fetch_username("vstream", Id)};
-
-        [{"resources"}]                           -> { "resources", undefined};
-        [{"resources", Id}]                       -> { "resources", Fetch_username("resource", Id)};
-
-        _                                         -> {   undefined, undefined}
-    end,
-
-    {Method, Resource, UserRequested, Private}.
+  {Method, Resource, UserRequested, Private}.
 
 
 
