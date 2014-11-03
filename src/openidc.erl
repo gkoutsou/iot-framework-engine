@@ -373,10 +373,11 @@ authorization_rules_individual(Method, Resource, UserRequested, Private, TokenOw
 authorization_rules_collection(Method, Resource) ->
     % Exception 5: Only fetch a collection or create a new User, Stream or Virtual Stream is allowed
     % This rule is checked in cases when a GET /users or POST to /streams, without a specific user id, is requested
-    ValidGET = ((Method == 'GET') and (Resource == "users")),
+    ValidResourceGet = lists:member(Resource, ["users", "suggest", "resources"]),
+    ValidGET = ValidResourceGet and (Method == 'GET'),
 
-    ValidResource = lists:member(Resource, ["users", "streams", "vstreams", "triggers", "resources"]),
-    ValidPOST = ValidResource and (Method == 'POST'),
+    ValidResourcePost = lists:member(Resource, ["users", "streams", "vstreams", "triggers", "resources"]),
+    ValidPOST = ValidResourcePost and (Method == 'POST'),
 
     Res = ValidGET or ValidPOST,
     erlang:display("Rule 5"),

@@ -259,7 +259,8 @@ get_webmachine_url() ->
 get_and_add_id(JsonStruct) ->
     Id  = lib_json:get_field(JsonStruct, "_id"),
     SourceJson  = lib_json:get_field(JsonStruct, "_source"),
-    lib_json:add_value(SourceJson, "id", Id).
+    % lib_json:add_value(SourceJson, "id", Id).
+    JsonStruct.
 
 %% @doc
 %% Get the search results and performs get_and_add_id/1 on each
@@ -364,10 +365,13 @@ get_info_request(ReqData) ->
       [{"vstreams", Id}, _]                     -> {  "vstreams", Fetch_username("vstream", Id)};
 
       [{"resources"}]                           -> { "resources", {undefined, false}};
-      [{"resources", Id}]                       -> { "resources", Fetch_username("resource", Id)};
+			[{"resources", Id}]                       -> { "resources", {undefined, false}};
 
-			[{"_search"}]                             -> {   "_search", {search, false}};
-			[{"_search", _}]                          -> {   "_search", {search, false}};
+      [{"_search"}]                             -> {   "_search", {search, false}};
+      [{"_search", _}]                          -> {   "_search", {search, false}};
+
+      [{"suggest"}] 														-> {   "suggest", {undefined, false}};
+      [{"suggest", _}] 													-> {   "suggest", {undefined, false}};
 
       _                                         -> {   undefined, {undefined, undefined}}
   end,
