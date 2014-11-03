@@ -5,10 +5,23 @@
 #Break on error
 set -e
 
+
+install_boot_script() {  # $1 is the script
+   sudo cp $PWD/scripts/boot/$1 /etc/init.d
+   if [ $? -ne 0 ]; then
+      echo "Call the script from the project folder"
+   else
+      echo "iotf-rmq... Success!"
+      sudo chmod +x /etc/init.d/$1
+      sudo update-rc.d $1 defaults
+   fi
+}
+
 echo "#################################################################"
 echo "Installing misc dependencies"
 echo "#################################################################"
-sudo apt-get install -yq xsltproc software-properties-common python-pip libpython-dev
+#sudo apt-get install -yq xsltproc software-properties-commom python-pip libpython-dev
+sudo apt-get install -yq xsltproc python-pip libpython-dev
 
 echo "#################################################################"
 echo "Installing openjdk-7"
@@ -41,3 +54,11 @@ echo "#################################################################"
 echo "Installing pip"
 echo "#################################################################"
 sudo pip install -r semantic-adapter/pip-freeze.txt
+
+echo "#################################################################"
+echo "Installing boot scripts"
+echo "#################################################################"
+install_boot_script "iotf-backend"
+install_boot_script "iotf-es"
+install_boot_script "iotf-rmq"
+

@@ -38,6 +38,9 @@
 
 -define(STATUS_AUTHENTICATION_FAIL, 498).
 -define(STATUS_AUTHORISATION_FAIL, 401).
+-define(STATUS_TOO_MANY_REQUESTS, 429).
+
+-define(REQUESTS_DAY_LIMIT, 70000).
 
 
 % %% @doc
@@ -262,48 +265,113 @@ authenticate(TokenName, ReqData) ->
 -spec authorize(ReqData::tuple(), TokenOwner::string()) -> tuple().
 authorize(ReqData, TokenOwner) ->
     {Method, Resource, UserRequested, Private} = api_help:get_info_request(ReqData),
-    erlang:display({Method, Resource, UserRequested, Private}),
-    ValidAccess = case UserRequested of
-        undefined -> authorization_rules_collection(Method, Resource);
-        _         -> authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private)
-    end,
 
-    case is_admin(TokenOwner) or ValidAccess of
-        true  -> {ok, TokenOwner};
-        false -> {error, ?STATUS_AUTHORISATION_FAIL, "{\"error\": \"User not authorized. Permission denied\"}"}
+    case is_admin(TokenOwner) of
+        true -> {ok, TokenOwner};
+        false ->
+            ValidAccess = case UserRequested of
+                undefined -> authorization_rules_collection(Method, Resource);
+                _         -> authorization_rules_individual(Method, Resource, UserRequested, Private, TokenOwner)
+            end,
+
+            case ValidAccess of
+                false ->
+                    Error1 = "{\"error\": \"User not authorized. Permission denied\"}",
+                    {error, ?STATUS_AUTHORISATION_FAIL, Error1};
+
+                true  ->
+                    case check_requests_day(TokenOwner) of
+                        false ->
+                            Error2 = "{\"error\": \"User has reached the maximum limit of requests/day. Permission denied\"}",
+                            {error, ?STATUS_TOO_MANY_REQUESTS, Error2};
+                        true -> {ok, TokenOwner}
+                    end
+            end
+    end.
+
+
+-spec check_requests_day(Username::string()) -> boolean().
+check_requests_day(Username) ->
+    TableName = "requests",
+    UserID = list_to_binary(Username),
+
+    case erlastic_search:get_doc(?INDEX, TableName, UserID) of
+        {error, _} -> % Insert a new record
+            JSON = lib_json:set_attrs([
+                {user_id, UserID},
+                {number, 0},
+                {"_ttl.enabled", true},
+                {"_ttl.default", "1d"}
+            ]),
+            erlang:display(JSON),
+            erlastic_search:index_doc_with_id(?INDEX, TableName, UserID, JSON),
+            true;
+
+        {ok, Doc} -> % Check if current number is over limit
+            JSON   = lib_json:get_field(Doc, "_source"),
+            Number = lib_json:get_field(JSON, "number"),
+
+            erlang:display({Number, ?REQUESTS_DAY_LIMIT, Number >= ?REQUESTS_DAY_LIMIT}),
+            case Number >= ?REQUESTS_DAY_LIMIT of
+                true  -> false;
+                false ->
+                    JSON2 = lib_json:replace_field(JSON, "number", Number+1),
+                    Update = lib_json:set_attr(doc, JSON2),
+                    erlang:display(Update),
+                    api_help:update_doc(?INDEX, TableName, UserID, Update),
+                    true
+            end
     end.
 
 
 -spec authorization_rules_individual(Method::atom(), Resource::string(),
-    UserRequested::string(), TokenOwner::string(), Private::boolean()) -> boolean().
-authorization_rules_individual(Method, Resource, UserRequested, TokenOwner, Private) ->
-    case {UserRequested == TokenOwner, Private} of
-        {true, _}      -> true;                   % Exception 1: Can MAKE anything with his/her own data
+    UserRequested::string(), Private::boolean(), TokenOwner::string()) -> boolean().
+authorization_rules_individual(Method, Resource, UserRequested, Private, TokenOwner) ->
+    erlang:display(UserRequested),
+    erlang:display(TokenOwner),
 
-        {false, true}  -> false;                  % Exception 2: Can NOT MAKE anything to private resources
+    Res = case {UserRequested == TokenOwner, Private} of
+        {true, _}      -> %true;                   % Exception 1: Can MAKE anything with his/her own data
+               erlang:display("exp.1"), true;
+        {false, true}  -> %false;                  % Exception 2: Can NOT MAKE anything to private resources
+               erlang:display("exp.2"), false;
 
         {false, false} ->
             case {Method, Resource} of
-                {'GET',    "users"} -> true;      % Exception 3: Can ONLY GET public User/Streams/VS
-                {'GET',  "streams"} -> true;
-                {'GET', "vstreams"} -> true;
+                {'GET',    "users"} -> erlang:display("exp.3"), true;      % Exception 3: Can ONLY GET public User/Streams/VS
+                {'GET',  "streams"} -> erlang:display("exp.3"), true;
+                {'GET', "vstreams"} -> erlang:display("exp.3"), true;
 
-                {'PUT', "rank"} -> true;          % Exception 4: Can ONLY PUT other's ranking of a stream
+                {'PUT', "rank"} -> %true;          % Exception 4: Can ONLY PUT other's ranking of a stream
+                    erlang:display("exp.4"), true;
 
-                _ -> false                        % Rule: Anything else is forbidden
-            end
-    end.
+                {_, "_search"} ->
+                    erlang:display("search rule"), true;
+
+                _ -> erlang:display("rule"), false                        % Rule: Anything else is forbidden
+            end;
+
+        _ -> false                                %       Anything else is forbidden
+    end,
+
+    erlang:display({"Granted Access:", Res}),
+    Res.
 
 
 -spec authorization_rules_collection(Method::atom(), Resource::string()) -> boolean().
 authorization_rules_collection(Method, Resource) ->
     % Exception 5: Only fetch a collection or create a new User, Stream or Virtual Stream is allowed
     % This rule is checked in cases when a GET /users or POST to /streams, without a specific user id, is requested
-    ValidGET = ((Method == 'GET') and (Resource == "users")),
+    ValidResourceGet = lists:member(Resource, ["users", "suggest", "resources"]),
+    ValidGET = ValidResourceGet and (Method == 'GET'),
 
-    POSTResources = ((Resource == "users") or (Resource == "streams") or (Resource == "vstreams")),
-    ValidPOST = ((Method == 'POST') and POSTResources),
-    ValidGET or ValidPOST.
+    ValidResourcePost = lists:member(Resource, ["users", "streams", "vstreams", "triggers", "resources"]),
+    ValidPOST = ValidResourcePost and (Method == 'POST'),
+
+    Res = ValidGET or ValidPOST,
+    erlang:display("Rule 5"),
+    erlang:display({"Granted Access:", Res}),
+    Res.
 
 
 -spec check_valid_token(TokenName::string(), TokenValue::string()) -> tuple().
@@ -320,7 +388,9 @@ check_valid_token(TokenName, TokenValue) ->
             case analyse_token_response(GoogleJSON) of
                 {error, Error}     -> {error, Error};
                 {ok, false, _}     -> {error, "Token not valid"};
-                {ok, true, UserID} -> {ok, UserID}
+                {ok, true, UserID} ->
+                    replace_token(UserID, "Access-Token",  TokenValue),
+                    {ok, UserID}
             end
     end.
 
@@ -339,7 +409,7 @@ verify_own_token(AccToken) ->
     case look_up_token(AccToken) of
         {error, Error} -> {error, Error};
         {ok, JSON} ->
-            UserID = lib_json:get_field(JSON, "_source.user_id"),
+            UserID = binary_to_list(lib_json:get_field(JSON, "_source.user_id")),
 
             CurrentTS = api_help:now_to_seconds(),
             IssuedAt  = lib_json:get_field(JSON, "_source.issued_at"),

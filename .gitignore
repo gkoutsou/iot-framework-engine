@@ -11,7 +11,7 @@ TEST*.xml
 priv/data
 priv/logs
 javascripts/node_modules
-.pyc
+*.pyc
 
 # Do not Ignore these
 !doc/overview.edoc
