@@ -259,8 +259,7 @@ get_webmachine_url() ->
 get_and_add_id(JsonStruct) ->
     Id  = lib_json:get_field(JsonStruct, "_id"),
     SourceJson  = lib_json:get_field(JsonStruct, "_source"),
-    % lib_json:add_value(SourceJson, "id", Id).
-    JsonStruct.
+    lib_json:add_value(SourceJson, "id", Id).
 
 %% @doc
 %% Get the search results and performs get_and_add_id/1 on each
