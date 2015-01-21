@@ -112,7 +112,7 @@ process_post(ReqData, State) ->
 												true ->
 													case erlastic_search:get_doc(?INDEX, StreamType, Id) of
 														{error,{404,_}} ->
-															NoDocMsg = "{\"error\":\"no document with streamid given is present in the ystem\"}",
+															NoDocMsg = "{\"error\":\"no document with streamid given is present in the system\"}",
 															{{halt,409}, wrq:set_resp_body(NoDocMsg, ReqData), State};
 
 														{error,{Code,Body}} ->
