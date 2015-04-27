@@ -131,7 +131,7 @@ process_post(ReqData, State) ->
 																		{{halt, Code}, ReqData, State} ->
 																			{{halt, Code}, ReqData, State};
 																		ok ->
-																			Msg = list_to_binary(FinalJson),
+																			Msg = list_to_binary(EnforcedFloatJson),
 																			StreamExchange = list_to_binary(StreamType ++ "s." ++Id),
 																			%% Connect
 																			% {ok, Connection} = amqp_connection:start(#amqp_params_network{host = "localhost"}),
@@ -251,7 +251,8 @@ get_datapoint(ReqData, State) ->
 							end;
 						true ->
 							Id = id_from_path(ReqData),
-							case erlastic_search:count(?INDEX, DataType, "stream_id:" ++ Id) of
+							Json = "{\"query\" : { \"term\" : { \"stream_id\" : \"" ++ Id ++ "\"}}}",
+							case erlastic_search:count(?INDEX, DataType, Json) of
 								{ok, Result} ->
 									EncodedResult = lib_json:encode(Result),
 									CountValue = lib_json:get_field(EncodedResult, "count"),

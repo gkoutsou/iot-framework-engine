@@ -176,7 +176,10 @@ delete_data_points_with_stream_id(Id, Type) ->
 		"stream" -> DatapointType = "datapoint";
 		"virtual_stream" -> DatapointType = "vsdatapoint"
 	end,
-		{ok, {{_Version, Code, _ReasonPhrase}, _Headers, Body}} = httpc:request(delete, {?ELASTIC_SEARCH_URL++"/sensorcloud/" ++ DatapointType ++ "/_query?q=stream_id:" ++ Id, []}, [], []),
+	DeleteJson = "{\"query\" : { \"term\" : { \"stream_id\" :\"" ++ Id ++ "\"}}}",
+	URL = ?ELASTIC_SEARCH_URL++"/sensorcloud/" ++ DatapointType ++ "/_query",
+	%{ok, {{_Version, Code, _ReasonPhrase}, _Headers, Body}} = httpc:request(delete, {URL, [], "application/json", DeleteJson}, [], []),
+	{ok, {{Code,_}, _, Body}} = lhttpc:request(URL, "DELETE", [], DeleteJson, 1000),
 	case Code of
 		200 ->
 			{ok};
