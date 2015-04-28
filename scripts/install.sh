@@ -31,9 +31,7 @@ sudo apt-get install -yq openjdk-7-jre-headless libwxgtk2.8-0
 echo "#################################################################"
 echo "Installing Erlang 16B1"
 echo "#################################################################"
-wget http://packages.erlang-solutions.com/site/esl/esl-erlang/FLAVOUR_1_general/esl-erlang_16.b.1~ubuntu~precise_amd64.deb
-sudo dpkg -i esl-erlang_16.b.1~ubuntu~precise_amd64.deb
-rm esl-erlang_16.b.1~ubuntu~precise_amd64.deb
+apt-get install -yq erlang
 
 echo "#################################################################"
 echo "Installing Nodejs together with npm"
