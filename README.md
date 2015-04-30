@@ -57,4 +57,4 @@ You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https:/
 
 ## Code Status
 
-[![Build Status](https://travis-ci.org/projectcs13/sensor-cloud.png)](https://travis-ci.org/projectcs13/sensor-cloud)
+[![Build Status](https://travis-ci.org/EricssonResearch/iot-framework-engine.svg)](https://travis-ci.org/EricssonResearch/iot-framework-engine)
