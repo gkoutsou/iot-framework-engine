@@ -10,7 +10,7 @@ You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https:/
 
 1. Download and compile the linux system dependencies, (only needed once per machine)
 
-   	make install_linux_deps
+        make install_linux_deps
 
 2. Download and compile the project dependencies, and compile the project sources
 
@@ -21,6 +21,9 @@ You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https:/
 1. Run the application by using startup script (one of the commands below)
 
         make run_all
+  
+  or
+  
         sudo ./scripts/sensec.sh start
 
 2. Alternative run (type each in separate shells)
@@ -35,6 +38,9 @@ You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https:/
 4. To shutdown either close each individual shell or run one of the commands below
 
         make stop_all
+
+   or
+   
         sudo ./scripts/sensec.sh stop
 
 ## Running tests
