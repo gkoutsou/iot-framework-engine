@@ -177,14 +177,14 @@ delete_data_points_with_stream_id(Id, Type) ->
 		"virtual_stream" -> DatapointType = "vsdatapoint"
 	end,
 	DeleteJson = "{\"query\" : { \"term\" : { \"stream_id\" :\"" ++ Id ++ "\"}}}",
-	URL = ?ELASTIC_SEARCH_URL++"/sensorcloud/" ++ DatapointType ++ "/_query",
-	%{ok, {{_Version, Code, _ReasonPhrase}, _Headers, Body}} = httpc:request(delete, {URL, [], "application/json", DeleteJson}, [], []),
-	{ok, {{Code,_}, _, Body}} = lhttpc:request(URL, "DELETE", [], DeleteJson, 1000),
+	URL = ?ELASTIC_SEARCH_URL++"/" ++ ?INDEX ++ "/" ++ DatapointType ++ "/_query",
+	{ok, {{Code,_}, _, Body}} = lhttpc:request(URL, "DELETE", [{<<"Content-Type">>,"application/json"}], DeleteJson, 1000),
 	case Code of
 		200 ->
 			{ok};
 		Code ->
-			{error,{Code, Body}}
+			erlang:display("delete by query fail - no datapoints in this stream "++Id),
+			{ok}
 	end.
 
 
