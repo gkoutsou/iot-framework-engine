@@ -233,8 +233,8 @@ process_post(ReqData, State) ->
 										{false,true} ->
 							    		case erlastic_search:get_doc(?INDEX, "user", string:to_lower(binary_to_list(UserId))) of
 												{ok, Json} ->
-													MinVal = binary_to_list(lib_json:get_field(UserAdded, "min_val")),
-													MaxVal = binary_to_list(lib_json:get_field(UserAdded, "max_val")),
+													MinVal = lib_json:get_field(UserAdded, "min_val"),
+													MaxVal = lib_json:get_field(UserAdded, "max_val"),
 													MinValF = bin_to_num(MinVal),
 													MaxValF = bin_to_num(MaxVal),
 													case MinValF > MaxValF of
