@@ -235,9 +235,9 @@ process_post(ReqData, State) ->
 												{ok, Json} ->
 													MinVal = binary_to_list(lib_json:get_field(UserAdded, "min_val")),
 													MaxVal = binary_to_list(lib_json:get_field(UserAdded, "max_val")),
-													erlang:display(MinVal),
-													erlang:display(MaxVal),
-													case MinVal > MaxVal of
+													MinValF = bin_to_num(MinVal),
+													MaxValF = bin_to_num(MaxVal),
+													case MinValF > MaxValF of
 														true ->
 															ErrorString = "The field \"min_val\" is greater than \"max_val\"",
 															{{halt, 412}, wrq:set_resp_body(ErrorString, ReqData), State};
@@ -844,6 +844,11 @@ add_server_side_fields(Json) ->
 			     {"user_ranking.nr_rankings", 0},
 			     {active, true}]).
 
-
+bin_to_num(Bin) ->
+    N = binary_to_list(Bin),
+    case string:to_float(N) of
+        {error,no_float} -> list_to_integer(N);
+        {F,_Rest} -> F
+    end.
 
 
