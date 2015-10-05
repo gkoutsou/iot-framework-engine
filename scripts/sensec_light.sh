@@ -29,7 +29,7 @@ if [[ ("$1" = "start") || ("$1" = "test_setup") ]]; then
     fi
     echo $! >> $HOME_PATH/.temp.log
 elif [ "$1" = "stop" ]; then
-    echo "Closing nodejs and Sensor-Cloud"
+    echo "Closing Sensor-Cloud"
     while read line
     do
 	kill -- -$(ps opgid= $line | tr -d ' ')
