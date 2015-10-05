@@ -22,9 +22,9 @@ if [[ ("$1" = "start") || ("$1" = "test_setup") ]]; then
     curl -XPUT localhost:$ES_PORT/sensorcloud
     if [ "$1" = "start" ]; then
 	if [ -d "$LOG_DIR" ]; then
-	    erl -noshell -pa $HOME_PATH/ebin/ $HOME_PATH/lib/*/ebin/ $HOME_PATH/lib/*/bin/ -boot start_sasl -s reloader -s engine -sname engine -config $HOME_PATH/config/engine.config > $LOG_DIR/sensor-cloud_log.log &
+	    erl -noshell -pa $HOME_PATH/ebin/ $HOME_PATH/lib/*/ebin/ $HOME_PATH/lib/*/bin/ -boot start_sasl -s reloader -s engine -sname engine -config $HOME_PATH/config/engine.config > $LOG_DIR/sensor-cloud_log.log 
 	else
-	    erl -noshell -pa $HOME_PATH/ebin/ $HOME_PATH/lib/*/ebin/ $HOME_PATH/lib/*/bin/ -boot start_sasl -s reloader -s engine -sname engine -config $HOME_PATH/config/engine.config &
+	    erl -noshell -pa $HOME_PATH/ebin/ $HOME_PATH/lib/*/ebin/ $HOME_PATH/lib/*/bin/ -boot start_sasl -s reloader -s engine -sname engine -config $HOME_PATH/config/engine.config 
 	fi
     fi
     echo $! >> $HOME_PATH/.temp.log
