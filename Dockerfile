@@ -35,30 +35,8 @@ RUN pip install -r semantic-adapter/pip-freeze.txt
 WORKDIR /opt/iot-framework-engine
 RUN make install
 
-# boot scripts
-WORKDIR /opt/iot-framework-engine/scripts/boot
-# change home directory
-RUN sed -i 's_/home/ubuntu_\/opt_g' iotf-backend
-RUN sed -i 's_/home/ubuntu_\/opt_g' iotf-rmq
-RUN sed -i 's_/home/ubuntu_\/opt_g' iotf-es
-# copy scripts
-RUN cp * /etc/init.d
-# change permissions
-RUN chmod +x /etc/init.d/iotf-backend
-RUN chmod +x /etc/init.d/iotf-es
-RUN chmod +x /etc/init.d/iotf-rmq
-
-# add to rc.d
-RUN update-rc.d iotf-backend defaults
-RUN update-rc.d iotf-es defaults
-RUN update-rc.d iotf-rmq defaults
-
-# start iotf-es
-RUN /etc/init.d/iotf-es start
-
-# start iotf-rmq
-RUN /etc/init.d/iotf-rmq start
-
-# start iotf-backend
-RUN /etc/init.d/iotf-backend start
+# expose port
 EXPOSE 8000
+
+# Start the IoT-Framework
+CMD cd /opt/iot-framework-engine && ./scripts/sensec_light.sh start
