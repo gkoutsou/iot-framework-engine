@@ -43,6 +43,24 @@ You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https:/
    
         sudo ./scripts/sensec.sh stop
 
+## Running the project via Docker
+
+1. Retrieve the Dockerfile
+2. Build the docker image
+        
+        docker build -t username/image_name:version home_directory
+        (or more concretely) docker build -t costa@iot-f:v1 .
+
+3. Run the image
+        
+        docker run -p 8080 -dti username/image_name:version 
+        (or more concretely) docker run -p -dti costa@iot-f:v1
+
+4. Check if the system is running. This command should show if the system is running properly and also the port mapping that has been made for port 8080.
+
+        docker ps
+        
+
 ## Running tests
 
 1. There are two ways of setting up the environment for testing. Either run the startup script by one of the below commands.
