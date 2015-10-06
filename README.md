@@ -4,7 +4,7 @@ The IoT-Framework is a computational engine for the Internet of Things (IoT). It
 
 ## Demo
 
-You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https://vimeo.com/98966770).
+You can check out a demo of the IoT-Framework here: [IoT-Framework demo](https://vimeo.com/98966770). Please mind that the demo assumes that you are using both the IoT-Framework Engine and the IoT-Framework-GUI. 
 
 ## Installing the project
 
