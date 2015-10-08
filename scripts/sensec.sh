@@ -15,6 +15,7 @@ if [[ ("$1" = "start") || ("$1" = "test_setup") ]]; then
     echo "starting ES"
     make run_es &
     echo $! >> $HOME_PATH/.temp.log
+    sleep 3
     echo "Starting node.js with receive.js"
     if [ -d "$LOG_JS_DIR" ]; then
 	make run_nodejs > $LOG_JS_DIR/nodejs_log.log &
