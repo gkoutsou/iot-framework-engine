@@ -491,8 +491,8 @@ subscription_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [], "application/json", "{\"username\":\"subsUser\"}"}, [], []),
 	{ok, {{_Version3, 200, _ReasonPhrase3}, _Headers3, Body3}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [], "application/json", "{\"username\":\"subsUser2\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"subsStream\",\"user_id\" : \"subsUser2\",\"private\":\"true\"}"}, [], []),
-	{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"subsStream2\",\"user_id\" : \"subsUser2\",\"private\":\"true\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"subsStream\",\"user_id\" : \"subsUser2\",\"private\":\"true\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\"}"}, [], []),
+	{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"subsStream2\",\"user_id\" : \"subsUser2\",\"private\":\"true\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\"}"}, [], []),
 	api_help:refresh(),
 
 	StrId1 = lib_json:get_field(Body1,"_id"),
