@@ -60,7 +60,7 @@ inets:start().
 process_search_post_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \"search1\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"search\",\"user_id\" : \"search1\", \"private\" : \"false\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"search\",\"user_id\" : \"search1\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"private\" : \"false\"}"}, [], []),
     {ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"search\",\"user_id\" : \"search1\", \"private\" : \"true\"}"}, [], []),
     DocId1 = lib_json:get_field(Body1,"_id"),
     DocId2 = lib_json:get_field(Body2,"_id"),
