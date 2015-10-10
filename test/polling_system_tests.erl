@@ -161,7 +161,7 @@ polling_history_test()->
 	UserId = "tomas",
     httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \""++UserId++"\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"Private\",\"user_id\" : \"" ++ lib_json:to_string(UserId) ++ "\",\"polling\":true, \"data_type\":\"application/json\", \"parser\":\"response.player_count\",\"polling_freq\":1,\"uri\":\"http://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1?appid=570\"}"
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"Private\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\",\"user_id\" : \"" ++ lib_json:to_string(UserId) ++ "\",\"polling\":true, \"data_type\":\"application/json\", \"parser\":\"response.player_count\",\"polling_freq\":1,\"uri\":\"http://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1?appid=570\"}"
 																					  }, [], []),
 	api_help:refresh(),
 	timer:sleep(1500),
