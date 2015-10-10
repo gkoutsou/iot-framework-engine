@@ -253,10 +253,10 @@ list_triggers_test_() ->
 		%% Create streams
 		{ok,{{_,200,_},_,Body1}} = 
 		    httpc:request(post,{?WEBMACHINE_URL++"/streams",[],"application/json",
-					"{\"name\":\"Stream1\",\"user_id\":\""++UserId1++"\"}"},[],[]),
+					"{\"name\":\"Stream1\",\"user_id\":\""++UserId1++"\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\"}"},[],[]),
 		{ok,{{_,200,_},_,Body2}} = 
 		    httpc:request(post,{?WEBMACHINE_URL++"/streams",[],"application/json",
-					"{\"name\":\"Stream2\",\"user_id\":\""++UserId1++"\"}"},[],[]),
+					"{\"name\":\"Stream2\",\"user_id\":\""++UserId1++"\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\"}"},[],[]),
 		api_help:refresh(),
 		StreamId1 = lib_json:to_string(lib_json:get_field(Body1,"_id")),
 		StreamId2 = lib_json:to_string(lib_json:get_field(Body2,"_id")),
@@ -326,7 +326,7 @@ start_up_triggers_test() ->
 	User1 = "tomas",
     httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \""++User1++"\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"Stream1\",\"user_id\":\"tomas\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"Stream1\",\"user_id\":\"tomas\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\"}"}, [], []),
 	StreamId1 = lib_json:get_field(Body1,"_id"),
 	api_help:refresh(),
 	Trigger = lib_json:set_attrs([{"function",list_to_binary("less_than")},{"streams",[StreamId1]},{"vstreams",[]},{"type","stream"},{"outputlist","[{}]"},{"outputlist[0].input",10},{"outputlist[0].output",["{}"]},{"outputlist[0].output[0].output_id",list_to_binary("tomas")},{"outputlist[0].output[0].output_type",list_to_binary("user")}]),
