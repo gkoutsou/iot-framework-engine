@@ -61,7 +61,7 @@ process_search_post_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \"search1\"}"}, [], []),
 	api_help:refresh(),
 	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"search\",\"user_id\" : \"search1\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"private\" : \"false\"}"}, [], []),
-    {ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"search\",\"user_id\" : \"search1\", \"private\" : \"true\"}"}, [], []),
+    {ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"name\" : \"search\",\"user_id\" : \"search1\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"private\" : \"true\"}"}, [], []),
     DocId1 = lib_json:get_field(Body1,"_id"),
     DocId2 = lib_json:get_field(Body2,"_id"),
     api_help:refresh(),
@@ -133,7 +133,7 @@ put_stream_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \"search3\"}"}, [], []),
 	api_help:refresh(),
 	% Test create
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\n\"name\" : \"get\",\n\"private\" : \"true\"\n, \"user_id\" : \"search3\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\n\"name\" : \"get\",\n\"private\" : \"true\"\n, \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \"search3\"}"}, [], []),
 
 	{ok, {{_VersionUser, 200, _ReasonPhraseUser}, _HeadersUser, _BodyUser}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [], "application/json", "{\"username\":\"search\"}"}, [], []),
 	api_help:refresh(),
@@ -180,7 +180,7 @@ delete_stream_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \"search4\"}"}, [], []),
 	api_help:refresh(),
 	% Test create
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\n\"name\" : \"get\"\n, \"user_id\" : \"search4\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\n\"name\" : \"get\"\n, \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \"search4\"}"}, [], []),
 	{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/users/search4/streams", [], "application/json", "{\"name\":\"get\"\n}"}, [], []),
 	DocId1 = lib_json:get_field(Body1,"_id"),
 	DocId2 = lib_json:get_field(Body2,"_id"),
@@ -241,7 +241,7 @@ restricted_fields_create_test() ->
 restricted_fields_update_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \"search5\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\n\"name\" : \"restricted\"\n, \"user_id\" : \"search5\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\n\"name\" : \"restricted\"\n, \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \"search5\"}"}, [], []),
 	DocId = lib_json:get_field(Body1,"_id"),
 	api_help:refresh(),
 	{ok, {{_Version2, 409, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(put, {?WEBMACHINE_URL++"/streams/" ++ lib_json:to_string(DocId), [], "application/json", "{\"user_ranking\" : \"\"}"}, [], []),
@@ -269,7 +269,7 @@ restricted_fields_update_test() ->
 server_side_creation_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \"search7\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"user_id\" : \"search7\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"user_id\" : \"search7\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\"}"}, [], []),
 	DocId = lib_json:get_field(Body1,"_id"),
 	api_help:refresh(),
 	{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(get, {?WEBMACHINE_URL++"/streams/" ++ lib_json:to_string(DocId), []}, [], []),
@@ -300,7 +300,7 @@ ranking_stream_test() ->
                 DocId1 = lib_json:to_string(lib_json:get_field(Body1, "_id")),
 		api_help:refresh(),
 
-		{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\" : \"test0001\",\"user_id\" : \""++ UserName ++ "\"}"}, [], []),
+		{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\" : \"test0001\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \""++ UserName ++ "\"}"}, [], []),
 
 		DocId2 = lib_json:get_field(Body2,"_id"),
 
@@ -351,7 +351,7 @@ ranking_stream_test() ->
 add_unsupported_field_test() ->
 	{ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(post, {?WEBMACHINE_URL++"/users", [], "application/json", "{\"username\":\"test\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"user_id\" : \"test\"}"}, [], []),
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"user_id\" : \"test\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\"}"}, [], []),
 	DocId = lib_json:get_field(Body1,"_id"),
 	api_help:refresh(),
 	{ok, {{_Version2, 403, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [],"application/json", "{\"test\":\"asdas\",\"user_id\" : \"test\"}"}, [], []),
@@ -422,7 +422,7 @@ post_stream_with_parser_test()->
 	UserId = "lihao",
         httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \""++UserId++"\"}"}, [], []),
 	api_help:refresh(),
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"Private\",\"user_id\" : \"" ++ lib_json:to_string(UserId) ++ "\",\"private\":\"true\", \"data_type\":\"application/json\", \"parser\":\""++?PARSER2++"\"}"
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"Private\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \"" ++ lib_json:to_string(UserId) ++ "\",\"private\":\"true\", \"data_type\":\"application/json\", \"parser\":\""++?PARSER2++"\"}"
 																					  }, [], []),
 	{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"Public\",\"user_id\" : \"" ++ lib_json:to_string(UserId) ++ "\",\"private\":\"false\", \"data_type\":\"application/xml\", \"parser\":\""++?PARSER1++"\"}"
 																					  }, [], []),
