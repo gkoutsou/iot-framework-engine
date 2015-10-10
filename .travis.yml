@@ -4,9 +4,11 @@ before_install:
   - sudo apt-get install -qq xsltproc 
   - sudo add-apt-repository "deb http://ftp.sunet.se/pub/lang/CRAN/bin/linux/ubuntu precise/" 
   - sudo apt-get install r-base
+install:
+  - make install
 services:
   - rabbitmq
-script: "make install && make test_travis"
+script: "make test_travis"
 before_script: 
 - "curl https://raw.githubusercontent.com/EricssonResearch/iot-framework-engine/master/scripts/travis-elasticsearch.sh| bash"
 - "cd scripts/python/"
