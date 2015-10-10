@@ -591,7 +591,7 @@ connect_engine_polling_test()->
 	api_help:refresh(),
 	
 	% test posting
-	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"Public\",\"user_id\" : \"" ++ lib_json:to_string(UserId) ++ "\",\"private\":\"false\", \"data_type\":\"application/json\", \"parser\":\""++?PARSER1++"\"
+	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\"name\":\"Public\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \"" ++ lib_json:to_string(UserId) ++ "\",\"private\":\"false\", \"data_type\":\"application/json\", \"parser\":\""++?PARSER1++"\"
 																																				, \"uri\":\""++?POLL_ADD1++"\" ,\"polling_freq\":2, \"polling\":true
 																																				}"
 																					  }, [], []),
