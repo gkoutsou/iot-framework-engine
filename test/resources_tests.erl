@@ -133,7 +133,7 @@ get_streams_suggested_test() ->
     api_help:refresh(),
     DocId = lib_json:get_field(Body1,"_id"),
 
-    {ok, {{_Version3, 200, _ReasonPhrase3}, _Headers3, Body3}} = httpc:request(post, {"http://localhost:8000/streams", [],"application/json", "{\"name\" : \"suggStream\",\"type\": \"Temperature\",\"user_id\" : \"1\", \"resource\" : {\"resource_type\" :\""++ lib_json:to_string(DocId) ++ "\", \"uuid\" : \"1\" }}"}, [], []),
+    {ok, {{_Version3, 200, _ReasonPhrase3}, _Headers3, Body3}} = httpc:request(post, {"http://localhost:8000/streams", [],"application/json", "{\"name\" : \"suggStream\",\"type\": \"Temperature\", \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \"1\", \"resource\" : {\"resource_type\" :\""++ lib_json:to_string(DocId) ++ "\", \"uuid\" : \"1\" }}"}, [], []),
       %Get the created resource in order to check the new new suggested stream
 
     {ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(get, {"http://localhost:8000/resources/" ++ lib_json:to_string(DocId), []}, [], []),
