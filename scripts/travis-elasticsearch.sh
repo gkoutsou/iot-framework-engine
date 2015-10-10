@@ -13,12 +13,7 @@ wait_for_elasticsearch(){
 
 run() {
     echo "Starting elasticsearch ..."
-    if [ $DEBUG ]
-    then
-        ./lib/elasticsearch*/bin/elasticsearch -f
-    else
-        ./lib/elasticsearch*/bin/elasticsearch 2>&1 /dev/null
-    fi
+    ./lib/elasticsearch*/bin/elasticsearch &
     wait_for_elasticsearch
     cd ../../
     echo "Started"
