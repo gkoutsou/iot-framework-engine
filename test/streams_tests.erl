@@ -156,7 +156,7 @@ put_stream_test() ->
 	{ok, {{_Version10, 404, _ReasonPhrase10}, _Headers10, Body10}} = httpc:request(put, {?WEBMACHINE_URL++"/streams/1", [], "application/json", "{\"name\" : \"put\"\n}"}, [], []),
 	?assertEqual(<<"false">>,lib_json:get_field(Body5,"private")),
 	?assertEqual(true,lib_json:get_field(Body5,"private") =/= <<"true">>),
-	?assertEqual(true,lib_json:get_field(Body6,"private") =/= <<"false">>),
+	%?assertEqual(true,lib_json:get_field(Body6,"private") =/= <<"false">>),
 	?assertEqual(true,lib_json:get_field(Body6,"private") == <<"true">>),
 	?assertEqual(true,lib_json:get_field(Body5,"name") == <<"put">>),
 	?assertEqual(true,lib_json:get_field(Body5,"name") =/= <<"get">>),
