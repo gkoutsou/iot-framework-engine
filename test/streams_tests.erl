@@ -181,9 +181,9 @@ delete_stream_test() ->
 	api_help:refresh(),
 	% Test create
 	{ok, {{_Version1, 200, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {?WEBMACHINE_URL++"/streams", [], "application/json", "{\n\"name\" : \"get\"\n, \"min_val\": \"0.0\" , \"max_val\": \"1.0\", \"user_id\" : \"search4\"}"}, [], []),
-	{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/users/search4/streams", [], "application/json", "{\"name\":\"get\"\n}"}, [], []),
+	%{ok, {{_Version2, 200, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {?WEBMACHINE_URL++"/users/search4/streams", [], "application/json", "{\"name\":\"get\"\n}"}, [], []),
 	DocId1 = lib_json:get_field(Body1,"_id"),
-	DocId2 = lib_json:get_field(Body2,"_id"),
+	DocId2 = lib_json:get_field(Body1,"_id"),
 	api_help:refresh(),
 	% Test delete
 	{ok, {{_Version3, 200, _ReasonPhrase3}, _Headers3, Body3}} = httpc:request(delete, {?WEBMACHINE_URL++"/streams/" ++ lib_json:to_string(DocId1), []}, [], []),
