@@ -253,7 +253,7 @@ unique_username_test() ->
 	{ok, {{_Version2, 409, _ReasonPhrase2}, _Headers2, Body2}} = httpc:request(post, {"http://localhost:8000/users", [],"application/json", "{\"username\" : \"unique\",\"private\":\"true\"}"}, [], []),
 	
 	{ok, {{_Version3, 200, _ReasonPhrase3}, _Headers3, _Body3}} = httpc:request(delete, {"http://localhost:8000/users/unique", []}, [], []),
-	?assertEqual(Body2, "Non unique username given").
+	?assertEqual(Body2, "{\"error\": \"Non unique username given\"}").
 
 %% @doc
 %% Function: username_exist_test/0
@@ -265,7 +265,7 @@ unique_username_test() ->
 -spec username_exist_test() -> ok | {error, term()}.
 username_exist_test() ->
 	{ok, {{_Version1, 403, _ReasonPhrase1}, _Headers1, Body1}} = httpc:request(post, {"http://localhost:8000/users", [],"application/json", "{\"private\":\"true\"}"}, [], []),
-	?assertEqual(Body1, "Username missing").
+	?assertEqual(Body1, "{\"error\": \"Username missing\"}").
 
 %% @doc
 %% Function: get_index_id/0
