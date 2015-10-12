@@ -236,6 +236,7 @@ post_data_user_test() ->
 					  "{\"trigger\":{\"input\":6,\"stream_id\":\"" ++ lib_json:to_string(StreamId2) ++"\",\"trigger_id\":\"" ++ lib_json:to_string(TriggerId2) ++ "\",\"type\":\"stream\",\"value\":4.0}}",
 					  "{\"trigger\":{\"input\":6,\"stream_id\":\"" ++ lib_json:to_string(StreamId2) ++"\",\"trigger_id\":\"" ++ lib_json:to_string(TriggerId2) ++ "\",\"type\":\"stream\",\"value\":4.0}}"],
 	ReferenceList2 = ["{\"trigger\":{\"input\":5,\"stream_id\":\"" ++ lib_json:to_string(StreamId1) ++"\",\"trigger_id\":\"" ++ lib_json:to_string(TriggerId1) ++ "\",\"type\":\"stream\",\"value\":4.0}}"],
+	erlang:display(NotificationList1), erlang:display(ReferenceList1)),
 	?assertEqual(true, check_all_exist(NotificationList1,ReferenceList1)),
 	?assertEqual(true, check_all_exist(NotificationList2,ReferenceList2)).
 %% @doc
