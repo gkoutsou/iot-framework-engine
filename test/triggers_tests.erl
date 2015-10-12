@@ -101,8 +101,8 @@ post_data_exchange_test() ->
     Descript = "Trigger data exchange test",
     Setup = 
 	fun() ->
-		User1 = "test1",
-		User2 = "test2",
+		User1 = "test9",
+		User2 = "test8",
 		http:post(?WEBMACHINE_URL++"/users", "{\"username\" : \""++User1++"\"}"),
 		http:post(?WEBMACHINE_URL++"/users", "{\"username\" : \""++User2++"\"}"),
 		api_help:refresh(),
@@ -185,8 +185,8 @@ post_data_exchange_test() ->
 %% Returns: ok | {error, term()}
 %% @end
 post_data_user_test() ->
-	User1 = "tomas",
-	User2 = "erik",
+	User1 = "tom",
+	User2 = "er",
     httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \""++User1++"\"}"}, [], []),
     httpc:request(post, {?WEBMACHINE_URL++"/users", [],"application/json", "{\"username\" : \""++User2++"\"}"}, [], []),
 	api_help:refresh(),
