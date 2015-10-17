@@ -1,10 +1,9 @@
-sudo: false
 language: erlang
 env: R_HOME=/usr/lib/R
 before_install:
-  - apt-get install -qq xsltproc 
-  - add-apt-repository "deb http://ftp.sunet.se/pub/lang/CRAN/bin/linux/ubuntu precise/" 
-  - apt-get install r-base
+  - sudo apt-get install -qq xsltproc 
+  - sudo add-apt-repository "deb http://ftp.sunet.se/pub/lang/CRAN/bin/linux/ubuntu precise/" 
+  - sudo apt-get install r-base
 install:
   - make install
 services:
