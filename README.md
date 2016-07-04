@@ -4,7 +4,7 @@ The IoT-Framework is a computational engine for the Internet of Things (IoT). It
 
 There are is an [Ericsson Research blog](http://www.ericsson.com/research-blog/) post that gives a brief intro to what the IoT-Framework is and what can be done using it: [A computational engine for the Internet of Things](https://www.ericsson.com/research-blog/internet-of-things/computational-engine-internet-things/)
 
-Moreover, there is a publication which describes the inner workings of the engine along with how to measure it's performance. This publication has title "Performance Evaluation of an IoT Platform" and can be found [here](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6982906&queryText%3Dvandikas). 
+Moreover, there is a publication which describes the inner workings of the engine along with how to measure its performance. This publication has title "Performance Evaluation of an IoT Platform" and can be found [here](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6982906&queryText%3Dvandikas). 
 
 ## Demo
 
