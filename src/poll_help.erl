@@ -59,7 +59,7 @@ get_streams_using_polling() ->
 %% Purpose: Converts a list of stream Jsons to a list of pollerInfo records
 %% Returns: [] | [Stream, ...]
 %% @end
--spec json_to_record_streams([json_string()]) -> [] | [record()].
+-spec json_to_record_streams([json_string()]) -> [] | [#pollerInfo{}].
 json_to_record_streams([]) -> [];
 json_to_record_streams([H|T]) ->
 	[json_to_record_stream(H) | json_to_record_streams(T)].
@@ -72,7 +72,7 @@ json_to_record_streams([H|T]) ->
 %% Purpose: Converts a stream Json to a pollerInfo record
 %% Returns: #pollerInfo{}
 %% @end
--spec json_to_record_stream(Stream::json_string()) -> record().
+-spec json_to_record_stream(Stream::json_string()) -> #pollerInfo{}.
 json_to_record_stream(Stream) ->
 	Name = case lib_json:get_field(Stream, "_source.name") of
 			   undefined -> undefined;

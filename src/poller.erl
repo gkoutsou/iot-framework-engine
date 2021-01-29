@@ -1,4 +1,4 @@
-%% @author Tholsgård Gabriel, Li Hao
+%% @author Tholsgï¿½rd Gabriel, Li Hao
 %%   [www.csproj13.student.it.uu.se]
 %% @version 1.0
 %% @copyright [Copyright information]
@@ -25,7 +25,7 @@
 %% Parameter: State--type of state record(), define the necessary information of the poller.
 %% Returns: {ok, Pid} | {error, ErrMsg}
 %% @end
--spec start_link(State :: record()) -> {ok, pid()} | {error, term()}.
+-spec start_link(#state{}) -> {ok, pid()} | {error, term()}.
 start_link(State)->
 	gen_server:start_link(?MODULE, State, []).
 
@@ -35,7 +35,7 @@ start_link(State)->
 %% Returns: {ok, State}
 %% Side Effects: start inets and start the ssl, declare a new RabbitMQ exchange
 %% @end
--spec init(State :: record()) -> {ok, record()}.
+-spec init(#state{}) -> {ok, #state{}}.
 init(State)->
 	application:start(inets),
 	ssl:start(),
@@ -56,7 +56,7 @@ init(State)->
 %%            State     -- the current state of the gen_server, which may contain some status information.
 %% Returns: {noreply, ok, State}
 %% @end
--spec handle_cast(_Request :: term(), State :: record()) -> {noreply, ok, State :: record()}.
+-spec handle_cast(_Request :: term(), #state{}) -> {noreply, ok, #state{}}.
 handle_cast(_Request, State) -> {noreply, ok, State}.
 
 %% @doc
@@ -68,9 +68,9 @@ handle_cast(_Request, State) -> {noreply, ok, State}.
 %% Returns: {reply, (returned message), (new state of gen_server)}
 %%          (returned message) could be any thing you want to return to the client.
 %% @end
--spec handle_call(Request :: tuple(), _Form :: tuple(), State :: record()) -> {reply, {update, StreamId :: string(), FinalUri :: string(), NewFreq :: integer()}, State :: record()}
-																			 |{reply, {error, Reason :: string()}, State :: record()}
-																			 |{reply, {info, State :: record()}, State :: record()}.
+-spec handle_call(Request :: tuple(), _Form :: tuple(), #state{}) -> {reply, {update, StreamId :: string(), FinalUri :: string(), NewFreq :: integer()}, #state{}}
+																			 |{reply, {error, Reason :: string()}, #state{}}
+																			 |{reply, {info, #state{}}, #state{}}.
 handle_call({rebuild}, _Form, State)->
 	StreamId = State#state.stream_id,
 	Url = State#state.uri,
@@ -108,7 +108,7 @@ handle_call({check_info}, _Form, State)->
 %%            State   -- contains some status information of the gen_server
 %% Returns: {noreply, NewState}
 %% @end
--spec handle_info({probe}, State :: record()) -> {noreply, record()}.
+-spec handle_info({probe}, #state{}) -> {noreply, #state{}}.
 handle_info({probe}, State)->
 	StreamId = State#state.stream_id,
 	Parser = State#state.parser,
@@ -165,7 +165,7 @@ handle_info({probe}, State)->
 %%            State -- contains the status information of the gen_server
 %% Returns: ok | {error, Reason}
 %% @end
--spec terminate(_Reason :: term(), State :: record()) -> ok | {error, string()}.
+-spec terminate(_Reason :: term(), #state{}) -> ok | {error, string()}.
 terminate(_Reason, State)->
 	%% Close the channel
     amqp_channel:close(State#state.channel),

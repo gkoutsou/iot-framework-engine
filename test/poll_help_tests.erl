@@ -1,4 +1,4 @@
-%% @author Gabriel Tholsgård, Li Hao
+%% @author Gabriel Tholsgï¿½rd, Li Hao
 %%   [www.csproj13.student.it.uu.se]
 %% @version 1.0
 %% @copyright [Copyright information]
@@ -312,7 +312,7 @@ post_stream(Name, Uri) ->
 %% Purpose: Delete the specified stream from the stream type in ES.
 %% Returns: {ok, Result} | {ok, saved_to_file} | {error, Reason}.
 %% @end
--spec delete_stream_from_record(Record :: record()) -> {ok, term()} | {ok, saved_to_file} | {error, term()}.
+-spec delete_stream_from_record(Record :: #pollerInfo{}) -> {ok, term()} | {ok, saved_to_file} | {error, term()}.
 delete_stream_from_record(Record) when is_record(Record, pollerInfo) ->
 	Id = Record#pollerInfo.stream_id,
 	httpc:request(delete, {api_help:get_elastic_search_url()++"/sensorcloud" ++ "/stream/" ++ Id, []}, [], []).

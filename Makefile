@@ -6,7 +6,7 @@
 ### Variable assignment
 ################################################################################
 ERL := erl
-REBAR := ./rebar
+REBAR := DEBUG=1 rebar
 ERL_CONFIG := -config config/engine.config -config config/sasl.config
 ERL_BOOT := -boot start_sasl -s reloader -s engine
 ERL_PA_FOLDERS := -pa ebin/ lib/*/ebin/ lib/*/bin/
@@ -34,6 +34,11 @@ get_libs:
 	rm elasticsearch-1.1.2.zip
 	cp -r es_config/* lib/elasticsearch-1.1.2/config/
 	-git apply --directory=lib/erlson --whitespace=fix erlsonPatch.txt
+
+	git clone git://github.com/projectcs13/rErlang.git lib/rErlang
+	git clone git://github.com/rabbitmq/rabbitmq-server.git -b rabbitmq_v3_5_8 lib/rabbitmq-server
+	git clone git://github.com/rabbitmq/rabbitmq-codegen.git -b rabbitmq_v3_5_8 lib/rabbitmq-codegen
+	git clone git://github.com/rabbitmq/rabbitmq-erlang-client.git -b rabbitmq_v3_5_8 lib/rabbitmq-erlang-client
 
 compile_libs:
 	@$(REBAR) compile
@@ -78,21 +83,21 @@ run: compile
 ### Command: make run_all
 ### Starts all parts of the system in one command.
 run_all: compile
-	sudo scripts/sensec.sh start
+	scripts/sensec.sh start
 
 ### Command: make test_setup
 ### Runs all parts of the system except the erlang part. To be used prior to 'make test' for easy test setup
 test_setup: compile
-	sudo scripts/sensec.sh test_setup
+	scripts/sensec.sh test_setup
 
 ### Command: make stop_all
 ### Stops all parts of the system in one command.
 stop_all:
-	sudo scripts/sensec.sh stop
+	scripts/sensec.sh stop
 
 ### Command: make run_semantic_adapter
 run_semantic_adapter:
-	sudo python semantic-adapter/web_run.py
+	python semantic-adapter/web_run.py
 
 ### Command: make run_es
 ### Runs elastic search
@@ -113,7 +118,7 @@ run_fake_resource:
 ### Command: make run_rabbit
 ### Runs rabbitMQ server
 run_rabbit:
-	sudo lib/rabbitmq-server/scripts/rabbitmq-server
+	lib/rabbitmq-server/scripts/rabbitmq-server
 
 ### Command: make test
 ### Compile project resources (not libraries) and runs all eunit tests.

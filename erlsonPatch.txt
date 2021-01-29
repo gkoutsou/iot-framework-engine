@@ -1,20 +1,18 @@
 diff --git a/include/erlson.hrl b/include/erlson.hrl
-index f7ce189..565788b 100644
+index f7ce189..faca730 100644
 --- a/include/erlson.hrl
 +++ b/include/erlson.hrl
-@@ -7,8 +7,8 @@
+@@ -7,7 +7,7 @@
  -define(erlson_default(X, Default),
      try
          X
 -    catch error:'erlson_not_found' ->
--        Default
 +    catch error:_ ->
-+	    Default
+         Default
      end
  ).
- 
 diff --git a/src/erlson.erl b/src/erlson.erl
-index 1205634..f86e716 100644
+index fe38246..c7a12ac 100644
 --- a/src/erlson.erl
 +++ b/src/erlson.erl
 @@ -28,14 +28,14 @@
@@ -34,20 +32,22 @@ index 1205634..f86e716 100644
  
  -export([get_value/2]).
  -export([get_value/3]).
-@@ -105,6 +105,9 @@ get_value(Path, Dict, Default) ->
+@@ -104,7 +104,9 @@ get_value(Path, Dict, Default) ->
+             Default
      end.
  
- 
+-
 +fetch_path([H|T], Dict) when is_integer(H) ->
 +    Val = lists:nth(H, Dict),
 +    fetch_path(T, Val);
  fetch_path([H|T], Dict) ->
      Val = fetch_val(H, Dict),
      fetch_path(T, Val);
-@@ -138,8 +141,17 @@ store(Path, Value, Dict) ->
+@@ -137,9 +139,17 @@ store(Path, Value, Dict) ->
+             erlang:error('erlson_not_found', [Path, Dict])
      end.
  
- 
+-
 +store_path([N], Value, Dict) when is_integer(N) ->
 +    {Part1, [_OldValue | Part2]} = lists:split(N-1, Dict),
 +    Part1 ++ [Value | Part2];
@@ -62,8 +62,8 @@ index 1205634..f86e716 100644
  store_path([H|T], Value, Dict) ->
      InnerDict = fetch_val(H, Dict),
      % replace the existing value with the new inner dictionary
-@@ -151,6 +163,46 @@ store_val(Name, Value, Dict) ->
-     orddict:store(Name, Value, Dict).
+@@ -147,6 +157,52 @@ store_path([H|T], Value, Dict) ->
+     store_val(H, NewInnerDict, Dict).
  
  
 +-spec remove/2 :: (
@@ -105,28 +105,17 @@ index 1205634..f86e716 100644
 +    orddict:erase(Name, Dict).
 +
 +
-+
- % @doc Create Erlson dictionary from a proplist
- %
- % During conversion, each atom() property is converted to {atom(), true}
-@@ -237,6 +289,16 @@ store_proplist_elem(_X, _Dict, _MaxDepth) ->
-     throw('erlson_bad_proplist').
- 
- 
 +is_json_string(Json) ->
 +    try from_json(Json) of
 +	_ -> true
 +    catch
 +	_:_ -> false
 +    end.
-+	    
-+	     
 +
-+
- % @doc Convert Erlson dictionary to a JSON Object
- -spec to_json/1 :: (Dict :: orddict()) -> iolist().
- to_json(Dict) ->
-@@ -349,7 +411,7 @@ decode_json_term(L) when is_list(L) -> % JSON array
+ store_val(Name, Value, Dict) ->
+     orddict:store(Name, Value, Dict).
+ 
+@@ -352,7 +408,7 @@ decode_json_term(L) when is_list(L) -> % JSON array
      [ decode_json_term(X) || X <- L ];
  decode_json_term('null') ->
      % decoding JSON null as a more conventional 'undefined'
@@ -135,7 +124,7 @@ index 1205634..f86e716 100644
  
  
  from_json_fields(L) ->
-@@ -368,7 +430,7 @@ store_json_field({N, V}, Dict) ->
+@@ -371,7 +427,7 @@ store_json_field({N, V}, Dict) ->
  % as either atom() or binary(), and because Erlson dict is ordered, all binary()
  % fields will be stored closer to the tail of the list
  decode_json_field_name(N) ->

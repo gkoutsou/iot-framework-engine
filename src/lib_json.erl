@@ -87,6 +87,8 @@ add_field(Json, Field, Value)  ->
 %% @end
 -spec add_value(Json::json(), Field::field(),Value::json_input_value()) -> json_output_value().
 add_value(Json, Field, Value)  ->
+	erlang:display("Json:"),
+	erlang:display(Json),
     NewJson  = parse_json(Json),
     Attrs    = parse_attr(Field),
     NewValue = parse_value(Value),
@@ -605,9 +607,16 @@ parse_attr(Query) when is_list(Query) ->
 %% Function: parse_json/1
 %% @end
 parse_json(Json) when is_tuple(Json)->
+	erlang:display("is_tuple:"),
+	erlang:display(Json),
     erlson:from_json_term(Json);
 parse_json(Json) when is_list(Json)->
-    erlson:from_json(Json).
+	erlang:display("is_list:"),
+    erlson:from_json(Json);
+parse_json(A)->
+	erlang:display("wtf is this?"),
+    erlson:from_json(A).
+
 
 %% @doc
 %% @hidden

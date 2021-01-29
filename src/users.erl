@@ -354,7 +354,7 @@ add_subscriber(StreamId, UserId) ->
 
 
 
-    %% @doc
+%% @doc
 %% Function: remove_subscriber/2
 %% Purpose: Used to remove a new subscriber to a stream
 %%          in ES

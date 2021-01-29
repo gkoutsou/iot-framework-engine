@@ -1,4 +1,4 @@
-%% @author Tholsgård Gabriel, Li Hao
+%% @author Tholsgï¿½rd Gabriel, Li Hao
 %%   [www.csproj13.student.it.uu.se]
 %% @version 1.0
 %% @copyright [Copyright information]
@@ -59,7 +59,7 @@ init(_)->
 %%			currently only for implementing the handle_info/2 interface of gen_server, not quite useful.
 %% Returns: {noreply, State}
 %% @end
--spec handle_info(Request :: term(), _State :: [record()]) -> {noreply, list()}.
+-spec handle_info(Request :: term(), _State :: list()) -> {noreply, list()}.
 handle_info({print, Message}, _State)->
 	erlang:display(Message),
 	{noreply, _State}.
@@ -172,7 +172,7 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %% Purpose: make asynchronous call to polling_supervisor to create poller for each item in polling information list.
 %% Returns: ok
 %% @end
--spec create_poller_for_each(PollersInfoList :: [record()]) -> ok.
+-spec create_poller_for_each(PollersInfoList :: [#pollerInfo{}]) -> ok.
 create_poller_for_each([])->ok;
 create_poller_for_each([PollerInfo|PollerInfoList])->
 	gen_server:cast(polling_supervisor, {create_poller, PollerInfo}),
@@ -183,7 +183,7 @@ create_poller_for_each([PollerInfo|PollerInfoList])->
 %% Purpose: find one specific poller record in the pollers` information list.
 %% Returns: #pollerInfo | {error, ErrMsg}
 %% @end
--spec find_poller_by_id(StreamId :: string(), PollerList :: [record()]) -> record() | {error, string()}.
+-spec find_poller_by_id(StreamId :: string(), PollerList :: [#pollerInfo{}]) -> #pollerInfo{} | {error, string()}.
 find_poller_by_id(_StreamId, []) -> {error, "id doesn`t exist"};
 find_poller_by_id(StreamId, [Poller|Tail]) ->
 	case Poller#pollerInfo.stream_id == StreamId of
@@ -196,7 +196,7 @@ find_poller_by_id(StreamId, [Poller|Tail]) ->
 %% Purpose: delete a stream record with the stream`s id
 %% Returns: NewPollersRecordList | []
 %% @end
--spec delete_info(PollersList :: [record()], StreamId :: string()) -> [record()].
+-spec delete_info(PollersList :: [#pollerInfo{}], StreamId :: string()) -> [#pollerInfo{}].
 delete_info([], _)->[];
 delete_info([Poller|Tail], StreamId)->
 	case Poller#pollerInfo.stream_id == StreamId of
@@ -211,7 +211,7 @@ delete_info([Poller|Tail], StreamId)->
 %% Purpose: after poller done its rebuild, supervisor uses this function to update its pollers` info store.
 %% Returns: NewPollersRecordList | []
 %% @end
--spec update_info(PollersList :: [record()], StreamId :: string(), NewUri :: string(), NewTRef :: pid(), NewDataType :: string(), NewParser :: string()) -> [record()].
+-spec update_info(PollersList :: [#pollerInfo{}], StreamId :: string(), NewUri :: string(), NewTRef :: pid(), NewDataType :: string(), NewParser :: string()) -> [#pollerInfo{}].
 update_info([], _, _, _, _, _) -> [];
 update_info([Poller|Tail], StreamId, NewUri, NewTRef, NewDataType, NewParser) ->
 	case Poller#pollerInfo.stream_id == StreamId of

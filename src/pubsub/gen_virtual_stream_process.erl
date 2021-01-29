@@ -1,4 +1,4 @@
-%% @author Anders Steinrud, Gabriel Tholsgård <gath5951@student.uu.se>
+%% @author Anders Steinrud, Gabriel Tholsgï¿½rd <gath5951@student.uu.se>
 %%   [www.csproj13.student.it.uu.se]
 %% @version 1.0
 %% @copyright [Copyright information]
@@ -20,6 +20,7 @@
 -include_lib("pubsub.hrl").
 -include_lib("common.hrl").
 -include_lib("json.hrl").
+-include_lib("state.hrl").
 -include_lib("debug.hrl").
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -83,7 +84,7 @@ start_link(VStreamId, InputIds, Function) ->
 			| {ok, State, hibernate}
 			| {stop, Reason :: term()}
 			| ignore,
-	State :: record(),
+	State :: #state{},
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([VStreamId, InputIds, Function]) ->
@@ -197,12 +198,12 @@ handle_cast(_Msg, State) ->
 %% handle_info/2
 %% ====================================================================
 %% @doc <a href="http://www.erlang.org/doc/man/gen_server.html#Module:handle_info-2">gen_server:handle_info/2</a>
--spec handle_info(Info :: timeout | term(), State :: record()) -> Result when
+-spec handle_info(Info :: timeout | term(), State :: #state{}) -> Result when
 	Result :: {noreply, NewState}
 			| {noreply, NewState, Timeout}
 			| {noreply, NewState, hibernate}
 			| {stop, Reason :: term(), NewState},
-	NewState :: record(),
+	NewState :: #state{},
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 handle_info({#'basic.deliver'{}, #amqp_msg{payload = Body}},
